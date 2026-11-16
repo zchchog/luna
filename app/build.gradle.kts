@@ -10,15 +10,15 @@ plugins {
 }
 
 android {
-    namespace = "org.imdtv.iptvtv"
+    namespace = "tv.luna.player"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "org.imdtv.iptvtv"
+        applicationId = "tv.luna.player"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "0.7.2"
+        versionCode = 12
+        versionName = "0.8.0"
     }
 
     // Release key, kept outside the repo: ~/.config/iptv-tv/keystore.properties (storeFile, storePassword, keyAlias,
