@@ -40,6 +40,8 @@ data class AppSettings(
     val autoplayOnScroll: Boolean = false,
     val audioDecoder: AudioDecoder = AudioDecoder.SOFTWARE,
     val confirmExit: Boolean = true,
+    /** Look for a new version every time the app opens, and show the update pop-up when there is one. */
+    val checkUpdatesOnOpen: Boolean = true,
     val startOnBoot: Boolean = false,
     val epgUpdateIntervalHours: Int = 12,
     val epgUpdateOnStart: Boolean = false,

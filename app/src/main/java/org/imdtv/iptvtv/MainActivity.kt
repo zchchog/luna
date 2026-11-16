@@ -220,7 +220,11 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         app.player.toForeground()
-        // TV boxes keep the app alive for days: check on every return to it, at most every 6 hours.
-        lifecycleScope.launch { (application as IptvApp).container.updater.check() }
+        // "Check for updates when Luna opens" (on unless turned off in Settings > About): look every time the app comes
+        // to the front, and show the pop-up even if "Not now" was pressed last time.
+        lifecycleScope.launch {
+            val c = (application as IptvApp).container
+            if (c.settings.settings.first().checkUpdatesOnOpen) c.updater.check(manual = true)
+        }
     }
 }

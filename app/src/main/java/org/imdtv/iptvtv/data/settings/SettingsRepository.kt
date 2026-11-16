@@ -19,6 +19,7 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
     private val autoplay = booleanPreferencesKey("autoplay_on_scroll")
     private val decoder = stringPreferencesKey("audio_decoder")
     private val confirmExit = booleanPreferencesKey("confirm_exit")
+    private val checkUpdatesOnOpen = booleanPreferencesKey("check_updates_on_open")
     private val startOnBoot = booleanPreferencesKey("start_on_boot")
     private val interval = intPreferencesKey("epg_update_interval_hours")
     private val epgOnStart = booleanPreferencesKey("epg_update_on_start")
@@ -65,6 +66,7 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
             autoplayOnScroll = this[autoplay] ?: d.autoplayOnScroll,
             audioDecoder = this[decoder]?.let { n -> AudioDecoder.entries.find { it.name == n } } ?: d.audioDecoder,
             confirmExit = this[confirmExit] ?: d.confirmExit,
+            checkUpdatesOnOpen = this[checkUpdatesOnOpen] ?: d.checkUpdatesOnOpen,
             startOnBoot = this[startOnBoot] ?: d.startOnBoot,
             epgUpdateIntervalHours = this[interval] ?: d.epgUpdateIntervalHours,
             epgUpdateOnStart = this[epgOnStart] ?: d.epgUpdateOnStart,
@@ -102,6 +104,7 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
         this[autoplay] = s.autoplayOnScroll
         this[decoder] = s.audioDecoder.name
         this[confirmExit] = s.confirmExit
+        this[checkUpdatesOnOpen] = s.checkUpdatesOnOpen
         this[startOnBoot] = s.startOnBoot
         this[interval] = s.epgUpdateIntervalHours
         this[epgOnStart] = s.epgUpdateOnStart

@@ -24,7 +24,7 @@ import org.imdtv.iptvtv.BuildConfig
  * that credit and the licence, so the last line says so.
  */
 @Composable
-fun AboutRows(first: Modifier) {
+fun AboutRows(s: org.imdtv.iptvtv.data.settings.AppSettings, first: Modifier, onCheckOnOpen: (Boolean) -> Unit) {
     var result by remember { mutableStateOf<String?>(null) }
     Text("Created by Luna Developers", fontSize = 18.sp, color = Color.White, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
     Text("Version ${BuildConfig.VERSION_NAME}", fontSize = 16.sp, color = Color.White, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
@@ -45,4 +45,5 @@ fun AboutRows(first: Modifier) {
             result = if (!ok) "Couldn't check for updates. Check your connection" else if (updater.available.value == null) "You have the latest version" else null
         }
     }
+    SwitchRow("Check for updates when Luna opens", "Show a pop-up whenever a new version is out", s.checkUpdatesOnOpen) { onCheckOnOpen(it) }
 }

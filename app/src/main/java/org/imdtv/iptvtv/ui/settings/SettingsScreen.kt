@@ -205,7 +205,7 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
                         }
                     }
                     SettingsGroup.BACKUP -> BackupRows(vm, first)
-                    SettingsGroup.ABOUT -> AboutRows(first)
+                    SettingsGroup.ABOUT -> AboutRows(s, first) { on -> vm.update { it.copy(checkUpdatesOnOpen = on) } }
                 }
             }
         }
