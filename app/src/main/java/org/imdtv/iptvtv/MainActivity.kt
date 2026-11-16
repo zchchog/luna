@@ -194,6 +194,7 @@ class MainActivity : ComponentActivity() {
                     org.imdtv.iptvtv.recording.PromptHost((application as IptvApp).container.recordings) {
                         if ((app.stack.value.last() as? Screen.Player)?.live == true) app.back()
                     }
+                    org.imdtv.iptvtv.data.update.UpdatePrompt((application as IptvApp).container.updater, (application as IptvApp).container.background)
                     if (exitHint) Text(
                         buildAnnotatedString {
                             append("Press ")
@@ -219,5 +220,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         app.player.toForeground()
+        // TV boxes keep the app alive for days: check on every return to it, at most every 6 hours.
+        lifecycleScope.launch { (application as IptvApp).container.updater.check() }
     }
 }

@@ -17,7 +17,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
-    <!-- One-click updates from GitHub Releases (Settings › About › Version). -->
+    <!-- One-click updates from GitHub Releases (Settings › About › Check for updates). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Browse files…: see which file manager apps can pick a .zip or an image. -->
     <queries>
@@ -68,5 +69,6 @@
         <receiver android:name=".recording.RecordingReceiver" android:exported="false" />
 
         <!-- Install results for one-click updates (our own PendingIntent). -->
+        <receiver android:name=".data.update.UpdateReceiver" android:exported="false" />
     </application>
 </manifest>

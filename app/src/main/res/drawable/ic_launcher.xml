@@ -1,16 +1,27 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="108"
-    android:viewportHeight="108">
-    <path
-        android:fillColor="#0F1F2B"
-        android:pathData="M0,0h108v108h-108z" />
-    <!-- Crescent moon: a bright disc with a background-coloured disc over it. -->
-    <path
-        android:fillColor="#00B4DC"
-        android:pathData="M54,54m-28,0a28,28 0,1 1,56 0a28,28 0,1 1,-56 0" />
-    <path
-        android:fillColor="#0F1F2B"
-        android:pathData="M66,47m-24,0a24,24 0,1 1,48 0a24,24 0,1 1,-48 0" />
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <!-- Lunaro "Moonrise": a light blue moon rising inside a white TV screen, on the app's blue. -->
+    <path android:pathData="M96,0h320a96,96 0,0 1,96 96v320a96,96 0,0 1,-96 96h-320a96,96 0,0 1,-96 -96v-320a96,96 0,0 1,96 -96z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear"
+                android:startX="0" android:startY="0" android:endX="512" android:endY="512">
+                <item android:offset="0" android:color="#FF0A1753" />
+                <item android:offset="0.55" android:color="#FF1A39A6" />
+                <item android:offset="1" android:color="#FF3459CA" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <group>
+        <clip-path android:pathData="M124,132h264a28,28 0,0 1,28 28v162a28,28 0,0 1,-28 28h-264a28,28 0,0 1,-28 -28v-162a28,28 0,0 1,28 -28z" />
+        <path android:fillColor="#FF9DB4FF"
+            android:pathData="M256,350m-96,0a96,96 0,1 1,192 0a96,96 0,1 1,-192 0" />
+    </group>
+    <path android:strokeColor="#FFEEF3FF" android:strokeWidth="16"
+        android:pathData="M124,132h264a28,28 0,0 1,28 28v162a28,28 0,0 1,-28 28h-264a28,28 0,0 1,-28 -28v-162a28,28 0,0 1,28 -28z" />
+    <path android:fillColor="#FFEEF3FF"
+        android:pathData="M204,378h104a8,8 0,0 1,8 8v0a8,8 0,0 1,-8 8h-104a8,8 0,0 1,-8 -8v0a8,8 0,0 1,8 -8z" />
 </vector>
