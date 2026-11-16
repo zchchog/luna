@@ -129,10 +129,6 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     var guidePos: GuidePos? = null
-    /** Celestial Retro: the guide is open (else its category menu shows). Kept here so full screen and back returns to it. */
-    var retroGuideOpen by androidx.compose.runtime.mutableStateOf(false)
-    /** Gamestation: where the XMB is (column, item, open folder). Kept here so full screen, detail and Settings return to it. */
-    var xmb by androidx.compose.runtime.mutableStateOf(org.imdtv.iptvtv.ui.xmb.XmbState())
 
     init {
         viewModelScope.launch {
@@ -158,14 +154,60 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
         focused.value = null
         previewed.value = null
         guidePos = null
+        versionIndex = null
         timeShift.value = 0
-        retroGuideOpen = false
-        xmb = org.imdtv.iptvtv.ui.xmb.XmbState()
+        focusAt.value = null
     }
 
     fun select(e: RailEntry) {
         entry.value = e
         timeShift.value = 0
+        focusAt.value = null
+    }
+
+    /** The moment the highlight is on, once the viewer has moved along the guide; null = now. */
+    val focusAt = MutableStateFlow<Long?>(null)
+
+    /** Scroll the window so it starts at the half-hour that holds [t]. */
+    private fun showTime(t: Long) {
+        val base = Timeline.windowStart(now.value)
+        timeShift.value = ((Timeline.windowStart(t) - base) / HALF_HOUR).toInt().coerceIn(0, MAX_SHIFT)
+    }
+
+    /**
+     * Right on a guide row: the highlight moves to the channel's next programme. The window only scrolls when that
+     * programme would sit in its last half hour, and a row with no guide just moves half an hour on. Returns false at the end.
+     */
+    fun stepForward(progs: List<GuideProgramme>): Boolean {
+        val at = focusAt.value ?: now.value
+        val next = progs.firstOrNull { it.start > at }
+        if (next == null) {
+            if (!shiftTime(1)) return false
+            focusAt.value = maxOf(at, windowStart.value)
+            return true
+        }
+        val end = windowStart.value + WINDOW
+        focusAt.value = next.start
+        if (next.start >= end - HALF_HOUR) showTime(next.start)
+        return true
+    }
+
+    /**
+     * Left on a guide row: the highlight moves to the previous programme, back as far as now. Returns false when it is
+     * already on now, which is where Left opens the category list.
+     */
+    fun stepBack(progs: List<GuideProgramme>): Boolean {
+        val at = focusAt.value ?: return false
+        val here = progs.firstOrNull { it.start <= at && at < it.stop }
+        val before = progs.lastOrNull { it.start < (here?.start ?: at) }
+        if (before == null || before.stop <= now.value || before.start <= now.value) {
+            focusAt.value = null
+            timeShift.value = 0
+        } else {
+            focusAt.value = before.start
+            if (before.start < windowStart.value) showTime(before.start)
+        }
+        return true
     }
 
     fun shiftTime(by: Int): Boolean {
@@ -217,6 +259,18 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
         focused.value = ch
         preview(ch)
         watched(ch)
+    }
+
+    private var versionIndex: org.imdtv.iptvtv.data.catalogue.VersionIndex? = null
+    private var versionIndexFor: Long? = null
+
+    /** The other versions of [ch] in its playlist (HD, 4K, +1...), best first; empty when there are none. Built once per playlist. */
+    suspend fun versionsOf(ch: ChannelEntity): List<ChannelEntity> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        if (versionIndexFor != ch.providerId || versionIndex == null) {
+            versionIndex = org.imdtv.iptvtv.data.catalogue.VersionIndex(c.db.channelDao().byProvider(ch.providerId).filter { !it.hidden })
+            versionIndexFor = ch.providerId
+        }
+        versionIndex!!.versionsOf(ch)
     }
 
     /** Launch on the last channel full screen: select its category and focus it so Back lands on it in the guide. */

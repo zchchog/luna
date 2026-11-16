@@ -18,7 +18,6 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <!-- One-click updates from GitHub Releases (Settings › About › Version). -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Browse files…: see which file manager apps can pick a .zip or an image. -->
     <queries>
@@ -35,7 +34,7 @@
         android:name=".IptvApp"
         android:allowBackup="false"
         android:banner="@drawable/banner"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
@@ -69,6 +68,5 @@
         <receiver android:name=".recording.RecordingReceiver" android:exported="false" />
 
         <!-- Install results for one-click updates (our own PendingIntent). -->
-        <receiver android:name=".data.update.UpdateReceiver" android:exported="false" />
     </application>
 </manifest>

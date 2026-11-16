@@ -43,7 +43,7 @@ import org.imdtv.iptvtv.ui.dayDate
 import org.imdtv.iptvtv.ui.duration
 import org.imdtv.iptvtv.ui.onLongOk
 import org.imdtv.iptvtv.ui.theme.LocalTheme
-import org.imdtv.iptvtv.ui.theme.themeBackground
+import org.imdtv.iptvtv.ui.theme.guideBackground
 
 /** "Sat 15/11 6.00pm · 1h 05m" (length once known). */
 fun recordingWhen(r: RecordingEntity): String {
@@ -110,7 +110,7 @@ fun RecordingsScreen(nav: (@Composable () -> Unit)?, onPlay: (RecordingEntity) -
         androidx.compose.runtime.withFrameNanos { }
         rowFocus[id]?.let { runCatching { it.requestFocus() } }
     }
-    Box(if (nav != null) Modifier.fillMaxSize().themeBackground(colors.vodBg) else Modifier.fillMaxSize()) {
+    Box(if (nav != null) Modifier.fillMaxSize().guideBackground() else Modifier.fillMaxSize()) {
         Column(Modifier.padding(if (nav != null) androidx.compose.foundation.layout.PaddingValues(start = 50.dp, end = 50.dp, top = 22.dp) else androidx.compose.foundation.layout.PaddingValues(0.dp))) {
             nav?.invoke()
             val list = rows

@@ -1,7 +1,6 @@
 package org.imdtv.iptvtv.ui.live
 
 import androidx.compose.ui.graphics.drawscope.clipPath
-import org.imdtv.iptvtv.ui.theme.LocalGlassBackdrop
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import org.imdtv.iptvtv.ui.theme.LocalTheme
@@ -69,7 +68,7 @@ internal fun backgroundBitmap(colors: ThemeColors, density: androidx.compose.ui.
 }
 
 /** FADE blends the picture into the background (Glass); NONE is a plain box (Plus); RIM a glass edge (Liquid Glass). */
-enum class PreviewEdge { FADE, NONE, RIM }
+enum class PreviewEdge { FADE }
 
 @Composable
 fun Preview(vm: LiveViewModel, visible: Boolean, screen: Size, modifier: Modifier, edge: PreviewEdge = PreviewEdge.FADE) {
@@ -89,20 +88,8 @@ fun Preview(vm: LiveViewModel, visible: Boolean, screen: Size, modifier: Modifie
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        // Fade the picture into the background (mockup: left and bottom edges) by drawing the matching patch of
-        // background over it with a transparency gradient. Static, so it's rasterised once.
-        // RIM: the video surface can't be clipped, so the backdrop is painted over the four corners outside the
-        // rounded frame (one cached bitmap), then the glass edge.
-        val backdrop = LocalGlassBackdrop.current
-        if (edge == PreviewEdge.RIM && backdrop != null) Box(Modifier.fillMaxSize().drawWithCache {
-            val r = 16.dp.toPx()
-            val frame = androidx.compose.ui.graphics.Path().apply { addRoundRect(androidx.compose.ui.geometry.RoundRect(0f, 0f, size.width, size.height, r, r)) }
-            val corners = ImageBitmap(size.width.toInt().coerceAtLeast(1), size.height.toInt().coerceAtLeast(1))
-            CanvasDrawScope().draw(this, layoutDirection, androidx.compose.ui.graphics.Canvas(corners), size) {
-                clipPath(frame, androidx.compose.ui.graphics.ClipOp.Difference) { translate(-origin.x, -origin.y) { drawImage(backdrop.sharp) } }
-            }
-            onDrawBehind { drawImage(corners) }
-        }.border(1.dp, Brush.linearGradient(listOf(Color(0xB3FFFFFF), Color(0x26FFFFFF))), RoundedCornerShape(16.dp)))
+        // Fade the picture into the background (left and bottom edges) by drawing the matching patch of background over it
+        // with a transparency gradient. Static, so it's rasterised once.
         if (edge == PreviewEdge.FADE) Box(Modifier.fillMaxSize().drawWithCache {
             val bg = backgroundBitmap(colors, this, size, origin, screen)
             val left = ImageBitmap(size.width.toInt(), size.height.toInt())
@@ -117,21 +104,15 @@ fun Preview(vm: LiveViewModel, visible: Boolean, screen: Size, modifier: Modifie
             }
             onDrawBehind { drawImage(left); drawImage(bottom) }
         })
-        Row(
-            Modifier.align(Alignment.TopEnd).padding(top = 30.dp, end = 45.dp).clip(RoundedCornerShape(10.dp))
-                .background(Color(0x59000000)).padding(horizontal = 7.dp, vertical = 3.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(Modifier.size(5.dp).clip(CircleShape).background(Color(0xFFFF3B3B)))
-            Text("  LIVE", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-        }
     }
 }
 
 @Composable
-fun Hero(ch: ChannelEntity?, name: String, progs: List<GuideProgramme>, now: Long, logoSource: List<LogoKind>, badges: List<String>, modifier: Modifier) {
+fun Hero(ch: ChannelEntity?, name: String, progs: List<GuideProgramme>, now: Long, logoSource: List<LogoKind>, badges: List<String>, modifier: Modifier,
+         /** The moment the highlight is on (later than [now] after moving along the guide). */ at: Long = now, descLines: Int = 3) {
     if (ch == null) return
-    val cur = progs.firstOrNull { it.start <= now && now < it.stop }
+    val cur = progs.firstOrNull { it.start <= at && at < it.stop }
+    val notStarted = cur != null && cur.start > now
     Column(modifier) {
         Box(Modifier.size(60.dp, 43.dp).clip(RoundedCornerShape(3.dp)).background(Color(0x33FFFFFF)), contentAlignment = Alignment.Center) {
             ChannelLogo(ch, logoSource, Modifier.fillMaxSize().padding(4.dp))
@@ -140,7 +121,7 @@ fun Hero(ch: ChannelEntity?, name: String, progs: List<GuideProgramme>, now: Lon
             overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 9.dp, bottom = 5.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
             if (cur != null) {
-                Text("${duration(cur.stop - cur.start)} · Started at ${clockTime(cur.start)}" + if (badges.isNotEmpty()) " ·" else "",
+                Text("${duration(cur.stop - cur.start)} · ${if (notStarted) "Starts" else "Started"} at ${clockTime(cur.start)}" + if (badges.isNotEmpty()) " ·" else "",
                     fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
             } else {
                 Text(name, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
@@ -152,10 +133,10 @@ fun Hero(ch: ChannelEntity?, name: String, progs: List<GuideProgramme>, now: Lon
             }
         }
         cur?.desc?.let {
-            Text(it, fontSize = 14.sp, lineHeight = 19.sp, color = Color(0xFFEAF0FF), maxLines = 3, overflow = TextOverflow.Ellipsis,
+            Text(it, fontSize = 14.sp, lineHeight = 19.sp, color = Color(0xFFEAF0FF), maxLines = descLines, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 7.dp))
         }
-        if (cur != null) {
+        if (cur != null && !notStarted) {
             val f = ((now - cur.start).toFloat() / (cur.stop - cur.start)).coerceIn(0f, 1f)
             Box(Modifier.padding(top = 9.dp).size(210.dp, 2.5.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x24FFFFFF))) {
                 Box(Modifier.fillMaxHeight().fillMaxWidth(f).background(Color.White))

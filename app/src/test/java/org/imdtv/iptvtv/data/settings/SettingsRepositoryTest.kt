@@ -29,7 +29,7 @@ class SettingsRepositoryTest {
     @Test fun defaultsMatchSpec() = runTest { assertEquals(AppSettings(), repo.settings.first()) }
 
     @Test fun updateRoundTripsEveryField() = runTest {
-        val s = AppSettings(ThemeId.CELESTIAL_GLASS, true, AudioDecoder.HARDWARE, false, false, true, 24, true, false, 14, 0, 42L, true)
+        val s = AppSettings(ThemeId.CELESTIAL_GLASS, true, AudioDecoder.HARDWARE, false, true, 24, true, false, 14, 0, 42L, true)
             .copy(subtitlesOn = true, subtitleLanguage = "fr")
         repo.update { s }
         assertEquals(s, repo.settings.first())

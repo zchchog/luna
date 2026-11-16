@@ -1,7 +1,5 @@
 package org.imdtv.iptvtv.ui
 
-import org.imdtv.iptvtv.ui.theme.glass
-import org.imdtv.iptvtv.ui.theme.LocalGlassBackdrop
 import org.imdtv.iptvtv.ui.theme.LocalTheme
 
 import androidx.compose.ui.focus.focusRequester
@@ -78,8 +76,7 @@ fun TopNav(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
     // Entering the menu from below lands on the current tab, not the nearest one.
     Row(
         modifier.focusProperties { enter = { selectedFocus ?: FocusRequester.Default } }.focusGroup()
-            // Liquid Glass: the nav sits in a glass pill (no-op in other themes).
-            .glass(RoundedCornerShape(22.dp)).padding(if (LocalGlassBackdrop.current != null) 5.dp else 0.dp),
+            ,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -149,4 +146,7 @@ fun Modifier.onLongOk(action: () -> Unit): Modifier = composed {
 /** The app's logo (res/drawable-xhdpi/logo.png, rendered from art/mark.svg). */
 @Composable
 fun AppLogo(modifier: Modifier = Modifier) =
-    androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(org.imdtv.iptvtv.R.drawable.logo), contentDescription = null, modifier = modifier)
+    Box(modifier, contentAlignment = Alignment.Center) {
+        // The name as text (never next to the icon).
+        Text("Lunaro", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, softWrap = false)
+    }

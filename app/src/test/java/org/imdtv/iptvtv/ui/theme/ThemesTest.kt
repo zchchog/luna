@@ -8,29 +8,22 @@ import org.imdtv.iptvtv.data.settings.ThemeColour
 import org.imdtv.iptvtv.data.settings.themeIdOf
 
 class ThemesTest {
-    @Test fun oldNamesReadAsCelestialGlass() {
-        listOf("SKY_GLASS", "MIDNIGHT", "PLEZY", "CUSTOM", "nonsense", null)
+    /** Celestial Glass is the only theme: any saved choice, old or removed (Plus, Retro, Liquid Glass, Xcube, Gamestation), reads as it. */
+    @Test fun everySavedChoiceReadsAsCelestialGlass() {
+        listOf("SKY_GLASS", "MIDNIGHT", "CUSTOM", "nonsense", "CELESTIAL_PLUS", "CELESTIAL_RETRO", "LIQUID_GLASS", "XCUBE_180", "GAMESTATION", null)
             .forEach { assertEquals(it, ThemeId.CELESTIAL_GLASS, themeIdOf(it)) }
     }
 
-    @Test fun liquidGlassNameNowReads() = assertEquals(ThemeId.LIQUID_GLASS, themeIdOf("LIQUID_GLASS"))
+    @Test fun onlyCelestialGlassRemains() = assertEquals(listOf("Celestial Glass"), ThemeId.entries.map { it.label })
 
     /** The default colour keeps Celestial Glass exactly as it was signed off. */
     @Test fun defaultColourKeepsGlass() = assertEquals(colorsOf(ThemeId.CELESTIAL_GLASS), colorsOf(ThemeId.CELESTIAL_GLASS, ThemeColour.DEFAULT))
 
-    @Test fun colourChangesGlassAndLiquidBackgrounds() {
+    @Test fun colourChangesTheBackground() {
         ThemeColour.entries.drop(1).forEach { c ->
             assertTrue(c.name, colorsOf(ThemeId.CELESTIAL_GLASS, c).bg != colorsOf(ThemeId.CELESTIAL_GLASS).bg)
-            assertTrue(c.name, colorsOf(ThemeId.LIQUID_GLASS, c).bg != colorsOf(ThemeId.LIQUID_GLASS).bg)
         }
     }
 
-    @Test fun colourIgnoredByOtherThemes() = assertEquals(colorsOf(ThemeId.XCUBE_180), colorsOf(ThemeId.XCUBE_180, ThemeColour.RED))
-
-    @Test fun everyThemeHasColours() {
-        ThemeId.entries.forEach { assertTrue(it.name, colorsOf(it).bg.size >= 2) }
-    }
-
-    @Test fun interOnlyForTheGlassThemes() = assertEquals(
-        setOf(ThemeId.CELESTIAL_GLASS, ThemeId.LIQUID_GLASS), ThemeId.entries.filter { usesInter(it) }.toSet())
+    @Test fun themeHasColours() = assertTrue(colorsOf(ThemeId.CELESTIAL_GLASS).bg.size >= 2)
 }

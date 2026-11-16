@@ -95,8 +95,6 @@ class AppContainer(context: Context) {
         org.imdtv.iptvtv.data.backup.BackupRepository(db, settings, providerRepository)
     }
 
-    val updater: org.imdtv.iptvtv.data.update.Updater by lazy { org.imdtv.iptvtv.data.update.Updater(appContext, http, json, prefs) }
-
     val search: org.imdtv.iptvtv.data.search.SearchRepository by lazy { org.imdtv.iptvtv.data.search.SearchRepository(db) }
 
     private val player = lazy {

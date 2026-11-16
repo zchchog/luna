@@ -64,8 +64,7 @@ import org.imdtv.iptvtv.data.search.Section
 import org.imdtv.iptvtv.ui.ChannelLogo
 import org.imdtv.iptvtv.ui.FocusBox
 import org.imdtv.iptvtv.ui.theme.LocalTheme
-import org.imdtv.iptvtv.ui.theme.glass
-import org.imdtv.iptvtv.ui.theme.themeBackground
+import org.imdtv.iptvtv.ui.theme.guideBackground
 import org.imdtv.iptvtv.ui.vod.Poster
 import org.imdtv.iptvtv.ui.vod.VodItem
 
@@ -110,12 +109,12 @@ fun SearchScreen(
         keyboard?.show()
     }
 
-    val page = if (lists) Modifier.fillMaxSize() else Modifier.fillMaxSize().themeBackground(colors.vodBg).padding(start = 24.dp, end = 24.dp, top = 22.dp)
+    val page = if (lists) Modifier.fillMaxSize() else Modifier.fillMaxSize().guideBackground().padding(start = 24.dp, end = 24.dp, top = 22.dp)
     val shape = RoundedCornerShape(if (lists) 4.dp else 24.dp)
     Column(page) {
         nav()
         Row(
-            fieldModifier { editing }.padding(top = if (lists) 0.dp else 18.dp).fillMaxWidth().glass(shape).clip(shape)
+            fieldModifier { editing }.padding(top = if (lists) 0.dp else 18.dp).fillMaxWidth().clip(shape)
                 .background(if (lists) colors.cell else Color(0x1FFFFFFF))
                 .border(2.dp, if (hadFocus.value) Color.White else Color.Transparent, shape).padding(horizontal = 18.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,

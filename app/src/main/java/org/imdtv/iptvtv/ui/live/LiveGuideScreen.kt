@@ -1,11 +1,17 @@
 package org.imdtv.iptvtv.ui.live
 
-import org.imdtv.iptvtv.ui.theme.glass
-import org.imdtv.iptvtv.ui.theme.LocalGlassBackdrop
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import org.imdtv.iptvtv.ui.theme.LocalTheme
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -44,27 +50,21 @@ fun LiveGuideScreen(vm: LiveViewModel, nav: @Composable () -> Unit, onFullScreen
 
     var screen by remember { mutableStateOf(Size.Zero) }
     val colors = LocalTheme.current.colors // read here so a theme change re-rasterises the cached background
-    val backdrop = LocalGlassBackdrop.current // Liquid Glass: same layout, glass panels over its backdrop
-    val inset = if (backdrop != null) 12.dp else 0.dp
     Box(Modifier.fillMaxSize().onSizeChanged { screen = Size(it.width.toFloat(), it.height.toFloat()) }.drawWithCache {
         // The Chromecast GPU is the bottleneck: rasterise the full-screen gradients once, then just blit them.
-        val img = backdrop?.sharp ?: backgroundBitmap(colors, this, size, Offset.Zero, size)
+        val img = backgroundBitmap(colors, this, size, Offset.Zero, size)
         onDrawBehind { drawImage(img) }
     }) {
-        Preview(vm, visible = state.previewing, screen = screen, edge = if (backdrop != null) PreviewEdge.RIM else PreviewEdge.FADE,
-            // Liquid Glass: a smaller framed preview clear of the description panel.
-            // Top and height match the hero panel, so the nav pill never overlaps it.
-            modifier = Modifier.align(Alignment.TopEnd).then(if (backdrop != null) Modifier.padding(top = 80.dp, end = 30.dp).size(412.dp, 232.dp) else Modifier))
+        Preview(vm, visible = state.previewing, screen = screen, edge = PreviewEdge.FADE,
+            modifier = Modifier.align(Alignment.TopEnd).size(470.dp, 264.dp))
         Box(Modifier.padding(start = 24.dp, top = 22.dp)) { nav() }
-        GuideHero(vm, Modifier.padding(start = 24.dp, top = 80.dp).width(450.dp)
-            // Liquid Glass: a fixed-size panel, so moving focus doesn't re-rasterise it for each description length.
-            .then(if (backdrop != null) Modifier.height(232.dp) else Modifier).glass().padding(inset))
+        GuideHero(vm, Modifier.padding(start = 24.dp, top = 80.dp).width(450.dp))
 
         if (rail?.isEmpty() == true) {
             Text("All live categories are hidden. Show them again in Settings › Channels & categories.", fontSize = 16.sp,
                 color = Color.White, modifier = Modifier.padding(start = 24.dp, top = 380.dp))
         }
-        Row(Modifier.padding(start = 24.dp, top = 318.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(start = 24.dp, top = 266.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "◀ ${entry?.title.orEmpty()}", fontSize = 11.sp, color = Color.White, maxLines = 1,
                 modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(colors.cellDim).padding(horizontal = 7.dp, vertical = 2.dp),
@@ -76,10 +76,20 @@ fun LiveGuideScreen(vm: LiveViewModel, nav: @Composable () -> Unit, onFullScreen
             }
         }
 
-        // Glass: 35dp bottom leaves exactly four whole rows (25 header + 4 × 32 + 3 × 4) above the TV-safe edge.
-        GuideGrid(vm, state, if (backdrop != null) LIQUID_GRID else GLASS_GRID, onFullScreen, onLeftAtStart = { state.railOpen = true },
-            modifier = Modifier.padding(start = 24.dp, top = 340.dp, end = 24.dp, bottom = if (backdrop != null) inset else 35.dp).fillMaxSize().glass(blur = false).padding(inset)) // no backdrop patch on the grid: the performance gate (ledger)
-        if (state.railOpen) CategoryRail(vm, state)
+        // Runs to the bottom of the screen, fading out there to show there is more.
+        GuideGrid(vm, state, GLASS_GRID, onFullScreen, onLeftAtStart = { state.railOpen = true },
+            modifier = Modifier.padding(start = 24.dp, top = 290.dp, end = 24.dp).fillMaxSize())
+        // The category list slides in from the left over a dimmed guide, and slides back out.
+        AnimatedVisibility(state.railOpen, enter = fadeIn(tween(240)), exit = fadeOut(tween(220))) {
+            Box(Modifier.fillMaxSize().background(Color(0x66000000)))
+        }
+        AnimatedVisibility(
+            state.railOpen,
+            enter = slideInHorizontally(tween(340, easing = FastOutSlowInEasing)) { -it } + fadeIn(tween(260)),
+            exit = slideOutHorizontally(tween(260, easing = FastOutLinearInEasing)) { -it } + fadeOut(tween(220)),
+        ) {
+            CategoryRail(vm, state)
+        }
         GuideMenus(vm, state)
     }
 }
@@ -95,6 +105,8 @@ private fun GuideHero(vm: LiveViewModel, modifier: Modifier) {
     val logoSource by vm.logoSource.collectAsState()
     val previewingId by vm.previewingId.collectAsState()
     val formats by vm.player.formats.collectAsState()
+    val focusAt by vm.focusAt.collectAsState()
     val hero = channels.find { it.id == focused?.id } ?: focused // the list has the renamed copy
-    Hero(hero, hero?.displayName(strip).orEmpty(), programmes[focused?.id].orEmpty(), now, logoSource, heroBadges(focused?.id, previewingId, formats), modifier)
+    Hero(hero, hero?.displayName(strip).orEmpty(), programmes[focused?.id].orEmpty(), now, logoSource, heroBadges(focused?.id, previewingId, formats), modifier,
+        at = focusAt ?: now, descLines = 2)
 }

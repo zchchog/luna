@@ -2,6 +2,7 @@ package org.imdtv.iptvtv.ui.theme
 
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -12,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -35,119 +38,98 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 
-/** Liquid Glass backdrop (spec §6A.6): the sharp picture and a pre-blurred copy, both rasterised once per size. */
-class GlassBackdrop(val sharp: ImageBitmap, val blurred: ImageBitmap)
-
-/** Provided only while Liquid Glass is the theme; null elsewhere, which turns [glass] panels off. */
-val LocalGlassBackdrop = staticCompositionLocalOf<GlassBackdrop?> { null }
-
 private fun bitmap(density: Density, size: Size, draw: androidx.compose.ui.graphics.drawscope.DrawScope.() -> Unit): ImageBitmap {
     val img = ImageBitmap(size.width.toInt().coerceAtLeast(1), size.height.toInt().coerceAtLeast(1))
     CanvasDrawScope().draw(density, LayoutDirection.Ltr, androidx.compose.ui.graphics.Canvas(img), size, draw)
     return img
 }
 
-fun glassBackdrop(density: Density, size: Size, gradient: List<Color> = listOf(Color(0xFF0FB5BA), Color(0xFF7A3CF0))): GlassBackdrop {
-    val w = size.width; val h = size.height
-    val sharp = bitmap(density, size) {
-        drawRect(Brush.linearGradient(gradient, end = Offset(w, h)))
-        drawCircle(Color(0xFFFF5FA2), radius = h * .34f, center = Offset(w * .82f, h * .2f))
-        drawCircle(Color(0xFFFFB347), radius = h * .22f, center = Offset(w * .12f, h * .82f))
-        drawCircle(Color(0xFF3D8BFF), radius = h * .28f, center = Offset(w * .55f, h * .95f))
-        drawOval(Color(0xFF7FF0E0), topLeft = Offset(w * .3f, h * .05f), size = Size(w * .22f, h * .18f))
-    }
-    // Frosted blur, done once: shrink to 1/8, box-blur that small copy three times (≈ gaussian), scale back up.
-    val small = bitmap(density, Size(w / 8, h / 8)) {
-        drawImage(sharp, dstSize = IntSize((w / 8).toInt().coerceAtLeast(1), (h / 8).toInt().coerceAtLeast(1)), filterQuality = FilterQuality.High)
-    }
-    boxBlur(small, radius = 3, passes = 3)
-    val blurred = bitmap(density, size) {
-        drawImage(small, dstSize = IntSize(w.toInt(), h.toInt()), filterQuality = FilterQuality.High)
-    }
-    return GlassBackdrop(sharp, blurred)
-}
-
-/** In-place box blur of [img] (horizontal then vertical, [passes] times). Small bitmaps only: it runs on the CPU. */
-internal fun boxBlur(img: ImageBitmap, radius: Int, passes: Int) {
-    val bmp = img.asAndroidBitmap()
-    val w = bmp.width; val h = bmp.height
-    val px = IntArray(w * h).also { bmp.getPixels(it, 0, w, 0, 0, w, h) }
-    val tmp = IntArray(w * h)
-    fun pass(src: IntArray, dst: IntArray, len: Int, lines: Int, step: Int, lineStep: Int) {
-        for (l in 0 until lines) {
-            val base = l * lineStep
-            for (i in 0 until len) {
-                var a = 0; var r = 0; var g = 0; var b = 0
-                for (k in -radius..radius) {
-                    val c = src[base + (i + k).coerceIn(0, len - 1) * step]
-                    a += c ushr 24; r += (c shr 16) and 255; g += (c shr 8) and 255; b += c and 255
-                }
-                val n = 2 * radius + 1
-                dst[base + i * step] = ((a / n) shl 24) or ((r / n) shl 16) or ((g / n) shl 8) or (b / n)
-            }
-        }
-    }
-    repeat(passes) { pass(px, tmp, w, h, 1, w); pass(tmp, px, h, w, w, 1) }
-    bmp.setPixels(px, 0, w, 0, 0, w, h)
-}
-
-/** The theme's page background: the Liquid Glass backdrop when there is one, else [fallback]. */
-fun Modifier.themeBackground(fallback: Color): Modifier = composed {
-    val backdrop = LocalGlassBackdrop.current
-    if (backdrop == null) background(fallback) else drawBehind { drawImage(backdrop.sharp) }
-}
-
 private val EDGE = Brush.linearGradient(listOf(Color(0xB3FFFFFF), Color(0x26FFFFFF)))
 
 /**
- * A frosted panel: soft shadow, the blurred backdrop under it, a white tint, a bright 1dp edge and an inner top
- * highlight, all in one cached draw. [smoked] (over video) uses a dark tint and no backdrop. Without a Liquid Glass
- * backdrop a non-smoked panel draws nothing, so shared screens can apply it in every theme.
+ * A dark, smoked-glass panel for text over the video (the playing menu's lists): soft shadow, dark tint, bright edge. The
+ * whole panel is drawn into one bitmap once per size, so each frame is a single blit.
  */
-fun Modifier.glass(shape: Shape = RoundedCornerShape(16.dp), smoked: Boolean = false, blur: Boolean = true): Modifier = composed {
-    val backdrop = LocalGlassBackdrop.current
-    if (backdrop == null && !smoked) return@composed this
-    if (!blur && !smoked) return@composed drawWithCache {
-        // Tint + edge only, drawn directly (no backdrop patch): the cheap fallback for a large panel (spec §6A.9).
-        val outline = shape.createOutline(size, layoutDirection, this)
-        val px = 1.dp.toPx()
-        onDrawBehind {
-            drawOutline(outline, Color(0x2EFFFFFF))
-            drawOutline(outline, EDGE, style = Stroke(px))
+fun Modifier.smokedGlass(shape: Shape = RoundedCornerShape(16.dp)): Modifier = drawWithCache {
+    val m = 6.dp.toPx()
+    val panel = bitmap(this, Size(size.width + 2 * m, size.height + 2 * m)) {
+        translate(m, m) {
+            val outline = shape.createOutline(this@drawWithCache.size, layoutDirection, this@drawWithCache)
+            val path = Path().apply {
+                when (outline) {
+                    is Outline.Rectangle -> addRect(outline.rect)
+                    is Outline.Rounded -> addRoundRect(outline.roundRect)
+                    is Outline.Generic -> addPath(outline.path)
+                }
+            }
+            val px = 1.dp.toPx()
+            // Soft shadow below the panel only (clipped out of the panel, so no lines show inside its top edge).
+            clipPath(path, ClipOp.Difference) {
+                for (i in 1..3) translate(0f, i * 1.5f * px) { drawPath(path, Color.Black.copy(alpha = .06f)) }
+            }
+            drawPath(path, Color(0x8C0A0F1E))
+            drawPath(path, EDGE, style = Stroke(px))
         }
     }
-    var origin by remember { mutableStateOf(Offset.Zero) }
-    onGloballyPositioned { origin = it.positionInRoot() }.drawWithCache {
-        // The whole panel (shadow, backdrop patch, tint, edge, highlight) is rasterised once per size and position,
-        // so each frame is one bitmap blit — the guide's frame time is GPU-bound on the Chromecast.
-        val m = 6.dp.toPx()
-        val at = origin
-        val panel = bitmap(this, Size(size.width + 2 * m, size.height + 2 * m)) {
-            translate(m, m) {
-                val outline = shape.createOutline(this@drawWithCache.size, layoutDirection, this@drawWithCache)
-                val path = Path().apply {
-                    when (outline) {
-                        is Outline.Rectangle -> addRect(outline.rect)
-                        is Outline.Rounded -> addRoundRect(outline.roundRect)
-                        is Outline.Generic -> addPath(outline.path)
-                    }
-                }
-                val px = 1.dp.toPx()
-                // Soft shadow below the panel only (clipped out of the panel, so no lines show inside its top edge).
-                clipPath(path, ClipOp.Difference) {
-                    for (i in 1..3) translate(0f, i * 1.5f * px) { drawPath(path, Color.Black.copy(alpha = .06f)) }
-                }
-                if (backdrop != null && !smoked) clipPath(path) {
-                    val b = backdrop.blurred
-                    val w = this@drawWithCache.size.width.toInt().coerceIn(1, b.width)
-                    val h = this@drawWithCache.size.height.toInt().coerceIn(1, b.height)
-                    val src = IntOffset(at.x.toInt().coerceIn(0, b.width - w), at.y.toInt().coerceIn(0, b.height - h))
-                    drawImage(b, srcOffset = src, srcSize = IntSize(w, h), dstSize = IntSize(w, h))
-                }
-                drawPath(path, if (smoked) Color(0x8C0A0F1E) else Color(0x2EFFFFFF))
-                drawPath(path, EDGE, style = Stroke(px))
-            }
-        }
-        onDrawBehind { drawImage(panel, topLeft = Offset(-m, -m)) }
+    onDrawBehind { drawImage(panel, topLeft = Offset(-m, -m)) }
+}
+
+/**
+ * A floating sheet of frosted glass for panels that slide over the screen (the category list): a translucent [tint],
+ * a soft light from the top and a bright edge. Unlike [glass] it needs no backdrop and does not track its position,
+ * so it stays cheap while it moves.
+ */
+fun Modifier.glassSheet(tint: Color, shape: Shape = RoundedCornerShape(18.dp)): Modifier = drawWithCache {
+    val outline = shape.createOutline(size, layoutDirection, this)
+    val px = 1.dp.toPx()
+    val sheen = Brush.verticalGradient(listOf(Color(0x33FFFFFF), Color(0x08FFFFFF)))
+    onDrawBehind {
+        drawOutline(outline, tint)
+        drawOutline(outline, sheen)
+        drawOutline(outline, EDGE, style = Stroke(px))
     }
 }
+
+/**
+ * The category panel's backdrop: [base] colour, nearly solid at the left edge and fading to nothing at the right.
+ * Nothing else is drawn across it: anything that stops at the panel's right side would show as a hard edge.
+ */
+fun Modifier.railBackground(base: Color): Modifier = drawWithCache {
+    val fade = Brush.horizontalGradient(
+        0f to base.copy(alpha = .98f), .74f to base.copy(alpha = .96f), .9f to base.copy(alpha = .55f), 1f to Color.Transparent,
+        endX = size.width,
+    )
+    onDrawBehind { drawRect(fade) }
+}
+
+/**
+ * The background for the secondary screens (Settings, Search, Recordings): the same blue gradient as the guide, so they feel
+ * like one app.
+ */
+fun Modifier.guideBackground(): Modifier = composed {
+    val colors = LocalTheme.current.colors // read here so a change of theme colour redraws it
+    drawWithCache {
+        // Drawn into one bitmap once per size, like the guide's background, then just blitted.
+        val img = org.imdtv.iptvtv.ui.live.backgroundBitmap(colors, this, size, Offset.Zero, size)
+        onDrawBehind { drawImage(img) }
+    }
+}
+
+/**
+ * Fades the list out at the bottom edge (so it is clear there is more to scroll to) and, once scrolled, at the top too.
+ * The fade is applied to the list's own picture, so whatever is behind the panel shows through naturally.
+ */
+fun Modifier.fadeListEdges(state: androidx.compose.foundation.lazy.LazyListState, bottom: androidx.compose.ui.unit.Dp = 84.dp, top: androidx.compose.ui.unit.Dp = 30.dp): Modifier =
+    graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+        .drawWithContent {
+            drawContent()
+            val h = size.height
+            if (h <= 0f) return@drawWithContent
+            val b = ((h - bottom.toPx()) / h).coerceIn(0f, 1f)
+            drawRect(Brush.verticalGradient(0f to Color.Black, b to Color.Black, 1f to Color.Transparent), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+            if (state.canScrollBackward) {
+                val t = (top.toPx() / h).coerceIn(0f, 1f)
+                drawRect(Brush.verticalGradient(0f to Color.Transparent, t to Color.Black, 1f to Color.Black), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+            }
+        }
+

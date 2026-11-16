@@ -1,5 +1,8 @@
 package org.imdtv.iptvtv.ui.live
 
+import androidx.compose.ui.layout.layout
+import androidx.compose.foundation.layout.PaddingValues
+import org.imdtv.iptvtv.ui.theme.fadeListEdges
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -67,27 +70,13 @@ data class GridStyle(
     val rowDividers: Boolean = false,
     /** Flat cells with slightly rounded corners and a small gap instead of touching (Glass, Liquid). */
     val roundedCells: Boolean = false,
+    /** Multiplies every size of text in the grid. */
+    val textScale: Float = 1f,
 )
 
 /** Celestial Glass: mockup 01, 420px per half hour (1dp = 2px on a 1080p TV). */
 // 5.9dp/min: 195 + 5 + 120 × 5.9 = 908dp fits between the 24dp margins (the TV's overscan cut off a grid that ran to the edge).
-val GLASS_GRID = GridStyle(32.dp, 195.dp, 5.9.dp, 120, 4.dp, FontWeight.Medium, focusedProgramme = Color(0x8C7891AA), roundedCells = true) // frosted glass
-
-/** Liquid Glass: the Glass grid inside one glass panel; the focused programme is a brighter tint (spec §6A.6). */
-// dpPerMin 5.75: 195 + 120 × 5.75 = 885dp fits the 888dp inside the inset glass panel.
-val LIQUID_GRID = GLASS_GRID.copy(focusedProgramme = Color(0x59FFFFFF), dpPerMin = 5.75.dp)
-
-/** Xcube 180 (spec §6A.7): flat rows with thin light dividers, pale-green focus, ~6 rows × 1½ hours. */
-val XCUBE_GRID = GridStyle(30.dp, 200.dp, 6.dp, 90, 0.dp, FontWeight.Medium, focusedProgramme = Color(0xFFE8F5D8),
-    focusedProgrammeText = Color(0xFF1A3A0E), rowDividers = true)
-
-/** Celestial Plus (spec §6A.4): boxed cells, number first, yellow focus, overflow arrows, 1½ hours. */
-val PLUS_GRID = GridStyle(30.dp, 215.dp, 7.75.dp, 90, 3.dp, FontWeight.SemiBold, focusedProgramme = Color(0xFFF2C94C),
-    focusedProgrammeText = Color(0xFF0A1A5C), boxed = true, numberFirst = true, overflowArrows = true)
-
-/** Celestial Retro (spec §6A.5): 10 rows × 1½ hours, bordered royal-blue boxes, bold, yellow focus, navy header on sky. */
-val RETRO_GRID = GridStyle(27.dp, 180.dp, 7.5.dp, 90, 3.dp, FontWeight.Bold, focusedProgramme = Color(0xFFFFCC33),
-    focusedProgrammeText = Color(0xFF15257A), boxed = true, numberFirst = true, overflowArrows = true, headerColor = Color(0xFF15257A))
+val GLASS_GRID = GridStyle(36.dp, 195.dp, 5.9.dp, 120, 4.dp, FontWeight.Medium, focusedProgramme = Color(0x8C7891AA), roundedCells = true, textScale = 1.14f) // frosted glass
 
 private val PILL = RoundedCornerShape(5.dp)
 private val BOX = RoundedCornerShape(2.dp)
@@ -106,34 +95,39 @@ fun GuideGrid(
     val programmes by vm.programmes.collectAsState()
     val now by vm.now.collectAsState()
     val windowStart by vm.windowStart.collectAsState()
+    val focusAt by vm.focusAt.collectAsState()
+    val at = focusAt ?: now // the moment the highlight is on
     val focused by vm.focused.collectAsState()
     val strip by vm.strip.collectAsState()
     val marks by vm.marks.collectAsState()
     val recordingOnChannel by vm.recordingOnChannel.collectAsState()
     Column(modifier) {
-        Row(Modifier.height(25.dp).drawBehind { drawRect(Color(0x33FFFFFF), Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) },
+        Row(Modifier.height((25 * style.textScale).dp).drawBehind { drawRect(Color(0x33FFFFFF), Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) },
             verticalAlignment = Alignment.Bottom) {
-            Text(if (windowStart - now > 12 * 3600_000) "Later" else "Today", fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+            Text(if (windowStart - now > 12 * 3600_000) "Later" else "Today", fontSize = (13 * style.textScale).sp, fontWeight = FontWeight.SemiBold,
                 color = style.headerColor ?: Color.White, modifier = Modifier.width(style.channelCol).padding(bottom = 5.dp))
             for (i in 0 until style.windowMin / 30) {
-                Text(clockTime(windowStart + i * LiveViewModel.HALF_HOUR), fontSize = 11.sp, color = style.headerColor ?: LocalTheme.current.colors.muted,
+                Text(clockTime(windowStart + i * LiveViewModel.HALF_HOUR), fontSize = (11 * style.textScale).sp, color = style.headerColor ?: LocalTheme.current.colors.muted,
                     fontWeight = if (style.headerColor != null) FontWeight.Bold else null,
                     modifier = Modifier.width(style.dpPerMin * 30).padding(bottom = 5.dp))
             }
         }
-        Box(Modifier.fillMaxSize().clipToBounds()) {
-            LazyColumn(state = state.list, verticalArrangement = Arrangement.spacedBy(style.gap), modifier = Modifier.fillMaxSize()) {
+        // The list reaches [GLOW_ROOM] further left than the grid does, and its rows start that far in, so they stay where they were.
+        // The highlighted channel glows and grows a little; without the room, the list's edge cut that off flat on the left.
+        Box(Modifier.fillMaxSize().widenToTheLeft(GLOW_ROOM).fadeListEdges(state.list, bottom = 90.dp, top = 22.dp)) {
+            // Room under the last channel, so it can be scrolled up out of the fade at the bottom of the screen.
+            LazyColumn(state = state.list, verticalArrangement = Arrangement.spacedBy(style.gap), contentPadding = PaddingValues(start = GLOW_ROOM, bottom = 110.dp), modifier = Modifier.fillMaxSize()) {
                 itemsIndexed(channels, key = { _, ch -> ch.id }) { i, ch ->
                     GuideRow(
-                        ch, ch.displayName(strip), programmes[ch.id].orEmpty(), now, windowStart, style, isFocused = focused?.id == ch.id && !state.railOpen && state.heldFocus == null,
+                        ch, ch.displayName(strip), programmes[ch.id].orEmpty(), now, at, windowStart, style, isFocused = focused?.id == ch.id && !state.railOpen && state.heldFocus == null,
                         marked = { p -> (ch.id to p.start) in marks || ch.id in recordingOnChannel && p.start <= now && now < p.stop },
                         modifier = (if (i == state.focusIndex) Modifier.focusRequester(state.rowFocus) else Modifier)
                             .onPreviewKeyEvent { e ->
                                 if (state.railOpen) return@onPreviewKeyEvent true // rail is taking focus; don't move the guide behind it
                                 if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                 when (e.key) {
-                                    Key.DirectionLeft -> { if (!vm.shiftTime(-1)) { state.focusIndex = i; onLeftAtStart() }; true }
-                                    Key.DirectionRight -> { vm.shiftTime(1); true }
+                                    Key.DirectionLeft -> { if (!vm.stepBack(programmes[ch.id].orEmpty())) { state.focusIndex = i; onLeftAtStart() }; true }
+                                    Key.DirectionRight -> { vm.stepForward(programmes[ch.id].orEmpty()); true }
                                     Key.DirectionUp -> if (i == 0 && onUpAtTop != null) { onUpAtTop(); true } else false
                                     else -> false
                                 }
@@ -146,7 +140,7 @@ fun GuideGrid(
             }
             val nowMin = (now - windowStart) / 60_000
             if (nowMin in 0..style.windowMin) {
-                Box(Modifier.offset(x = style.channelCol + style.dpPerMin * nowMin.toInt()).width(1.dp).fillMaxHeight().background(Color(0xB3FFFFFF)))
+                Box(Modifier.offset(x = GLOW_ROOM + style.channelCol + style.dpPerMin * nowMin.toInt()).width(1.dp).fillMaxHeight().background(Color(0xB3FFFFFF)))
             }
         }
     }
@@ -154,7 +148,7 @@ fun GuideGrid(
 
 @Composable
 private fun GuideRow(
-    ch: ChannelEntity, name: String, progs: List<GuideProgramme>, now: Long, windowStart: Long, style: GridStyle, isFocused: Boolean,
+    ch: ChannelEntity, name: String, progs: List<GuideProgramme>, now: Long, at: Long, windowStart: Long, style: GridStyle, isFocused: Boolean,
     marked: (GuideProgramme) -> Boolean, modifier: Modifier, onFocused: () -> Unit, onClick: () -> Unit,
 ) {
     val colors = LocalTheme.current.colors
@@ -173,12 +167,12 @@ private fun GuideRow(
                 val fg = if (f) colors.onFocus else Color.White
                 val number = ch.customNumber ?: ch.number
                 if (style.numberFirst) {
-                    Text(listOfNotNull(number, name).joinToString("  "), fontSize = 14.sp, fontWeight = style.font, color = fg, maxLines = 1,
+                    Text(listOfNotNull(number, name).joinToString("  "), fontSize = (14 * style.textScale).sp, fontWeight = style.font, color = fg, maxLines = 1,
                         overflow = TextOverflow.Ellipsis)
                 } else {
-                    Text(name, fontSize = 14.sp, fontWeight = style.font, color = fg, maxLines = 1,
+                    Text(name, fontSize = (14 * style.textScale).sp, fontWeight = style.font, color = fg, maxLines = 1,
                         overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    number?.let { Text("  $it", fontSize = 12.sp, color = fg.copy(alpha = .85f)) }
+                    number?.let { Text("  $it", fontSize = (12 * style.textScale).sp, color = fg.copy(alpha = .85f)) }
                 }
             }
         }
@@ -190,12 +184,12 @@ private fun GuideRow(
                 Box(Modifier.width(style.dpPerMin * style.windowMin - when { style.boxed -> 3.dp; style.roundedCells -> 2.dp; else -> 0.dp })
                     .fillMaxHeight().background(colors.cellDim, when { style.boxed -> BOX; style.roundedCells -> CELL; else -> RectangleShape }),
                     contentAlignment = Alignment.CenterStart) {
-                    Text(if (progs.isEmpty()) "No guide information" else "", fontSize = 12.sp, color = colors.muted, modifier = Modifier.padding(horizontal = 10.dp))
+                    Text(if (progs.isEmpty()) "No guide information" else "", fontSize = (12 * style.textScale).sp, color = colors.muted, modifier = Modifier.padding(horizontal = 10.dp))
                 }
             }
             for (p in progs) {
                 val span = Timeline.span(p.start, p.stop, windowStart, end) ?: continue
-                val isNow = p.start <= now && now < p.stop
+                val isNow = p.start <= at && at < p.stop // the programme under the highlight (now, until the viewer moves along)
                 val past = p.stop <= now
                 val focusedNow = isFocused && isNow
                 val cell = when {
@@ -230,7 +224,7 @@ private fun GuideRow(
                         },
                     contentAlignment = Alignment.CenterStart,
                 ) {
-                    Text(p.title, fontSize = 12.5.sp, fontWeight = if (focusedNow) FontWeight.SemiBold else FontWeight.Normal,
+                    Text(p.title, fontSize = (12.5f * style.textScale).sp, fontWeight = if (focusedNow) FontWeight.SemiBold else FontWeight.Normal,
                         color = (if (focusedNow) style.focusedProgrammeText else Color.White).copy(alpha = if (past && !focusedNow) .55f else 1f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 10.dp))
                 }
             }
@@ -239,3 +233,13 @@ private fun GuideRow(
 }
 
 private val REC_DOT = Color(0xFFE53935)
+
+private val GLOW_ROOM = 24.dp
+
+/** Makes this [by] wider on its left side, leaving the right edge where it was. */
+private fun Modifier.widenToTheLeft(by: androidx.compose.ui.unit.Dp): Modifier = this.layout { measurable, constraints ->
+    val extra = by.roundToPx()
+    val width = constraints.maxWidth + extra
+    val placeable = measurable.measure(constraints.copy(minWidth = width, maxWidth = width))
+    layout(constraints.maxWidth, placeable.height) { placeable.place(-extra, 0) }
+}

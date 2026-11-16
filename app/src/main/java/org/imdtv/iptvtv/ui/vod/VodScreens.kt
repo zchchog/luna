@@ -1,7 +1,7 @@
 package org.imdtv.iptvtv.ui.vod
 
 import org.imdtv.iptvtv.ui.theme.LocalTheme
-import org.imdtv.iptvtv.ui.theme.themeBackground
+import org.imdtv.iptvtv.ui.theme.guideBackground
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -92,7 +92,7 @@ fun VodHomeScreen(vm: VodViewModel, nav: @Composable () -> Unit, onOpen: (VodIte
         LaunchedEffect(Unit) { if (wantFirst.value) { withFrameNanos { }; runCatching { firstItem.requestFocus(); wantFirst.value = false } } }
     }
 
-    Box(Modifier.fillMaxSize().themeBackground(LocalTheme.current.colors.vodBg)) {
+    Box(Modifier.fillMaxSize().guideBackground()) {
         Backdrop(focused?.let { details[it.id]?.backdrop ?: it.poster })
         Box(Modifier.padding(start = 50.dp, top = 22.dp)) { nav() }
         Row(Modifier.align(Alignment.TopEnd).padding(top = 25.dp, end = 50.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -282,7 +282,7 @@ fun VodDetailScreen(vm: VodViewModel, item: VodItem, onPlay: (url: String, title
     vm.learnedHeights.collectAsState().value // recompose when a height is learned
     val resolution = (d?.height ?: vm.learnedHeight(item))?.let { org.imdtv.iptvtv.player.resolutionLabel(it) }
 
-    Box(Modifier.fillMaxSize().themeBackground(LocalTheme.current.colors.vodBg)) {
+    Box(Modifier.fillMaxSize().guideBackground()) {
         Backdrop(d?.backdrop ?: item.poster)
         if (item.kind == Kind.MOVIE) {
             Column(Modifier.padding(start = 50.dp, top = 55.dp).width(430.dp)) {

@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import android.os.Bundle
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import androidx.activity.ComponentActivity
@@ -37,11 +38,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
 import org.imdtv.iptvtv.ui.theme.LocalTheme
 import org.imdtv.iptvtv.ui.theme.themeOf
-import org.imdtv.iptvtv.ui.theme.LocalGlassBackdrop
-import org.imdtv.iptvtv.ui.theme.glassBackdrop
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
 import org.imdtv.iptvtv.data.catalogue.displayName
@@ -53,15 +53,6 @@ import org.imdtv.iptvtv.ui.Screen
 import org.imdtv.iptvtv.ui.Tab
 import org.imdtv.iptvtv.ui.TopNav
 import org.imdtv.iptvtv.ui.live.LiveGuideScreen
-import org.imdtv.iptvtv.ui.live.PlusGuideScreen
-import org.imdtv.iptvtv.ui.retro.RetroMenuScreen
-import org.imdtv.iptvtv.ui.retro.RetroGuideScreen
-import org.imdtv.iptvtv.ui.xcube.XcubeCard
-import org.imdtv.iptvtv.ui.xcube.bladeCard
-import org.imdtv.iptvtv.ui.xcube.XcubeFrame
-import org.imdtv.iptvtv.ui.xcube.XcubeLive
-import org.imdtv.iptvtv.ui.xcube.XcubeVod
-import org.imdtv.iptvtv.ui.xmb.XmbScreen
 import org.imdtv.iptvtv.data.settings.ThemeId
 import org.imdtv.iptvtv.ui.live.LiveViewModel
 import org.imdtv.iptvtv.ui.vod.VodDetailScreen
@@ -95,10 +86,7 @@ class MainActivity : ComponentActivity() {
             val themeColour = app.settings.collectAsState().value.themeColour
             val density = androidx.compose.ui.platform.LocalDensity.current
             val conf = androidx.compose.ui.platform.LocalConfiguration.current
-            val backdrop = if (themeId != ThemeId.LIQUID_GLASS) null else remember(conf.screenWidthDp, conf.screenHeightDp, themeColour) {
-                with(density) { glassBackdrop(this, androidx.compose.ui.geometry.Size(conf.screenWidthDp.dp.toPx(), conf.screenHeightDp.dp.toPx()), themeColour.liquid.map { androidx.compose.ui.graphics.Color(it) }) }
-            }
-            CompositionLocalProvider(LocalTheme provides remember(themeId, themeColour) { themeOf(themeId, themeColour) }, LocalGlassBackdrop provides backdrop) {
+            CompositionLocalProvider(LocalTheme provides remember(themeId, themeColour) { themeOf(themeId, themeColour) }) {
             MaterialTheme(colorScheme = darkColorScheme()) {
             // Celestial Glass and Liquid Glass: every TV Text in Inter (the website's font). Inside MaterialTheme, which
             // otherwise sets its own sans-serif text style over anything provided outside it.
@@ -122,10 +110,16 @@ class MainActivity : ComponentActivity() {
                     if (!menuFocused) exitHint = false
                     if (exitHint) { delay(3_000); exitHint = false }
                 }
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                var cover by remember { androidx.compose.runtime.mutableFloatStateOf(0f) } // black cover for changes of screen (drawn further down)
                 BackHandler {
                     when {
-                        top == Screen.Vod && grid != null && settings.theme != ThemeId.XCUBE_180 && settings.theme != ThemeId.GAMESTATION -> vod.gridCategory.value = null
-                        top == Screen.Live && live.retroGuideOpen && settings.theme == ThemeId.CELESTIAL_RETRO -> live.retroGuideOpen = false
+                        top == Screen.Vod && grid != null -> vod.gridCategory.value = null
+                        // Leaving live full screen: go black first, so the screen being rebuilt behind is never seen.
+                        top is Screen.Player && top.live -> scope.launch {
+                            androidx.compose.animation.core.animate(cover, 1f, animationSpec = androidx.compose.animation.core.tween(140)) { v, _ -> cover = v }
+                            app.back()
+                        }
                         app.back() -> Unit
                         else -> when (rootBack(top, menuFocused, exitHint, settings.confirmExit)) {
                             RootBack.FOCUS_MENU -> runCatching { menuFocus.requestFocus() }
@@ -142,7 +136,7 @@ class MainActivity : ComponentActivity() {
                 val nav = @androidx.compose.runtime.Composable {
                     TopNav(tab, onSelect = selectTab, Modifier.onFocusChanged { menuFocused = it.hasFocus }, menuFocus,
                         showClock = settings.showDateTime,
-                        showDate = settings.theme == ThemeId.CELESTIAL_PLUS || settings.theme == ThemeId.LIQUID_GLASS, pingMs = pingMs,
+                        showDate = false, pingMs = pingMs,
                         tabs = org.imdtv.iptvtv.ui.visibleTabs(settings.recordingOn))
                 }
                 val themeId = LocalTheme.current.id
@@ -152,49 +146,21 @@ class MainActivity : ComponentActivity() {
                 }
                 // Recording switched off while its tab is open: back to Live.
                 LaunchedEffect(settings.recordingOn) { if (!settings.recordingOn && tab == Tab.RECORDINGS) selectTab(Tab.LIVE) }
-                val retroMenu = @androidx.compose.runtime.Composable { t: Tab ->
-                    RetroMenuScreen(t, live, vod, selectTab,
-                        recordings = if (settings.recordingOn) { { org.imdtv.iptvtv.recording.RecordingsScreen(null, app::playRecording, textColor = LocalTheme.current.colors.panel) } } else null,
-                        onLiveCategory = { e -> live.select(e); live.retroGuideOpen = true },
-                        onVodCategory = { c -> vod.gridCategory.value = c },
-                        menuFocus = menuFocus, onMenuFocused = { menuFocused = it },
-                        search = { org.imdtv.iptvtv.ui.search.SearchScreen(searchVm, {}, searchChannel, app::open, lists = true, textColor = LocalTheme.current.colors.panel) })
-                }
                 Box(Modifier.fillMaxSize().background(Color.Black)) {
                     val full: (org.imdtv.iptvtv.data.db.ChannelEntity) -> Unit = { ch ->
                         live.preview(ch)
                         live.watched(ch)
                         app.playFullScreen(ch.displayName(live.strip.value), live = true)
                     }
-                    val screens = @androidx.compose.runtime.Composable { card: XcubeCard? ->
+                    val screens = @androidx.compose.runtime.Composable {
                     when (top) {
                         Screen.Loading -> Unit
                         is Screen.Setup -> Box(Modifier.fillMaxSize().background(LocalTheme.current.colors.vodBg)) { ProviderFormScreen(app, top.editId) }
                         is Screen.Settings -> SettingsScreen(settingsVm, onAddPlaylist = app::addPlaylist, onEditPlaylist = app::editPlaylist,
                             onDeletePlaylist = app::deletePlaylist, onUsePlaylist = { live.resetForPlaylistSwitch(); app.usePlaylist(it) }, initialGroup = top.group)
-                        Screen.Live, Screen.Vod -> if (themeId == ThemeId.GAMESTATION) {
-                            XmbScreen(live, vod, full, app::open, app::openSettings, menuFocus, { menuFocused = it }, searchVm, searchChannel, app::playRecording)
-                        } else if (top == Screen.Live) when (themeId) {
-                            ThemeId.CELESTIAL_PLUS -> PlusGuideScreen(live, nav, full, pingMs)
-                            ThemeId.CELESTIAL_RETRO -> if (live.retroGuideOpen) RetroGuideScreen(live, full) else retroMenu(Tab.LIVE)
-                            else -> if (card != null) XcubeLive(live, card, full) else LiveGuideScreen(live, nav, full)
-                        }
-                        else when {
-                            card != null -> XcubeVod(vod, card, app::open)
-                            themeId == ThemeId.CELESTIAL_RETRO && grid == null -> retroMenu(tab)
-                            else -> VodHomeScreen(vod, nav, onOpen = app::open)
-                        }
-                        Screen.Search -> when {
-                            card != null -> org.imdtv.iptvtv.ui.search.SearchScreen(searchVm, {}, searchChannel, app::open, lists = true,
-                                fieldModifier = { typing -> Modifier.bladeCard(card, typing) }, openKeyboard = false)
-                            themeId == ThemeId.CELESTIAL_RETRO -> retroMenu(Tab.SEARCH)
-                            else -> org.imdtv.iptvtv.ui.search.SearchScreen(searchVm, nav, searchChannel, app::open)
-                        }
-                        Screen.Recordings -> when {
-                            card != null -> org.imdtv.iptvtv.recording.RecordingsScreen(null, app::playRecording, Modifier.bladeCard(card))
-                            themeId == ThemeId.CELESTIAL_RETRO -> retroMenu(Tab.RECORDINGS)
-                            else -> org.imdtv.iptvtv.recording.RecordingsScreen(nav, app::playRecording)
-                        }
+                        Screen.Live, Screen.Vod -> if (top == Screen.Live) LiveGuideScreen(live, nav, full) else VodHomeScreen(vod, nav, onOpen = app::open)
+                        Screen.Search -> org.imdtv.iptvtv.ui.search.SearchScreen(searchVm, nav, searchChannel, app::open)
+                        Screen.Recordings -> org.imdtv.iptvtv.recording.RecordingsScreen(nav, app::playRecording)
                         is Screen.Detail -> VodDetailScreen(vod, top.item, onPlay = { url, title ->
                             vod.play(url, top.item)
                             app.playFullScreen(title, live = false)
@@ -202,16 +168,32 @@ class MainActivity : ComponentActivity() {
                         is Screen.Player -> PlayerScreen(app.player, top.title, live.takeIf { top.live }, onGuide = { app.back() })
                     }
                     }
-                    // Xcube 180: Live, Movies, Series and Settings are blades inside one frame (spec §6A.7).
-                    if (themeId == ThemeId.XCUBE_180 && (top == Screen.Live || top == Screen.Vod || top == Screen.Search || top == Screen.Recordings || top is Screen.Settings)) {
-                        XcubeFrame(if (top is Screen.Settings) Tab.SETTINGS else tab, onBlade = selectTab, cardFocus = menuFocus,
-                            onCardFocused = { menuFocused = it }, tabs = org.imdtv.iptvtv.ui.visibleTabs(settings.recordingOn)) { card -> screens(card) }
-                    } else screens(null)
+                    screens()
+                    // Going into or out of full-screen playback: the picture moves between the corner preview and the whole
+                    // screen, which would show as a glitch. Cover that moment in black and fade it away.
+                    val playerOpen = top is Screen.Player
+                    var wasPlayerOpen by remember { mutableStateOf(playerOpen) }
+                    // Raised the moment the screen changes, and read only while drawing (below), so it is already on the first
+                    // frame of the new screen instead of arriving a frame after it.
+                    androidx.compose.runtime.SideEffect { if (wasPlayerOpen != playerOpen) { wasPlayerOpen = playerOpen; cover = 1f } }
+                    LaunchedEffect(playerOpen) {
+                        if (playerOpen) {
+                            // Going full screen: a short hold, then fade in.
+                            androidx.compose.animation.core.animate(1f, 0f, animationSpec = androidx.compose.animation.core.tween(450, delayMillis = 260)) { v, _ -> cover = v }
+                        } else {
+                            // Back at the guide: stay black until the corner window has drawn the picture (up to 2 s), then fade in.
+                            if (app.player.playingUrl.value != null) {
+                                kotlinx.coroutines.withTimeoutOrNull(2_000) { app.player.pictureShowing.first { it } }
+                                delay(120)
+                            }
+                            androidx.compose.animation.core.animate(1f, 0f, animationSpec = androidx.compose.animation.core.tween(380)) { v, _ -> cover = v }
+                        }
+                    }
+                    Box(Modifier.fillMaxSize().graphicsLayer { alpha = cover }.background(Color.Black))
                     // Connection questions and recording notices, over every screen.
                     org.imdtv.iptvtv.recording.PromptHost((application as IptvApp).container.recordings) {
                         if ((app.stack.value.last() as? Screen.Player)?.live == true) app.back()
                     }
-                    org.imdtv.iptvtv.data.update.UpdatePrompt((application as IptvApp).container.updater, (application as IptvApp).container.background)
                     if (exitHint) Text(
                         buildAnnotatedString {
                             append("Press ")
@@ -237,7 +219,5 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         app.player.toForeground()
-        // TV boxes keep the app alive for days: check on every return to it, at most every 6 hours.
-        lifecycleScope.launch { (application as IptvApp).container.updater.check() }
     }
 }

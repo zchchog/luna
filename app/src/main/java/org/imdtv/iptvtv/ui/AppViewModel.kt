@@ -51,12 +51,8 @@ fun rootBack(top: Screen, menuFocused: Boolean, hintShowing: Boolean, confirmExi
     else -> RootBack.EXIT
 }
 
-/** The screens at launch; the Player's title is filled in once the channel has loaded. */
-fun startStack(hasProvider: Boolean, s: AppSettings, lastChannelExists: Boolean): List<Screen> = when {
-    !hasProvider -> listOf(Screen.Setup())
-    s.lastChannelOnStart && s.lastLiveChannelId != null && lastChannelExists -> listOf(Screen.Live, Screen.Player("", live = true))
-    else -> listOf(Screen.Live)
-}
+/** The screens at launch: the main page (the live guide), or playlist setup when there is no playlist yet. It never opens a channel. */
+fun startStack(hasProvider: Boolean): List<Screen> = if (hasProvider) listOf(Screen.Live) else listOf(Screen.Setup())
 
 data class FormState(val busy: Boolean = false, val error: String? = null, val result: String? = null, val progress: String? = null)
 
@@ -69,7 +65,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val tab = MutableStateFlow(Tab.LIVE)
     val form = MutableStateFlow(FormState())
     val settings: StateFlow<AppSettings> = c.settings.settings.stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
-    /** Set once at launch when the app opens full screen on the last channel; the activity hands it to LiveViewModel. */
+    /** Set when a channel from search should start playing; the activity hands it to LiveViewModel. */
     val startChannel = MutableStateFlow<ChannelEntity?>(null)
     private var hasProvider = false
 
@@ -85,16 +81,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val active = c.providerRepository.activeProviderId.first()
             hasProvider = active != null
-            val s = c.settings.settings.first()
-            // Must belong to the active playlist: the id may be left over from one since switched or deleted.
-            val last = s.lastLiveChannelId?.let { c.db.channelDao().get(it) }?.takeIf { it.providerId == active }
-            val start = startStack(hasProvider, s, last != null)
-            if (start.last() is Screen.Player && last != null) {
-                startChannel.value = last
-                stack.value = listOf(Screen.Live, Screen.Player(last.displayName(parseStripList(c.db.providerDao().get(last.providerId)?.nameStrip.orEmpty())), live = true))
-            } else {
-                stack.value = start
-            }
+            stack.value = startStack(hasProvider)
         }
     }
 
@@ -212,7 +199,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (wasActive) {
                 form.value = FormState() // first-run setup must not show the last add/edit result
                 tab.value = Tab.LIVE
-                stack.value = startStack(hasProvider, settings.value, lastChannelExists = false)
+                stack.value = startStack(hasProvider)
             }
         }
     }

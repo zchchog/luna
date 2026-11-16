@@ -28,7 +28,7 @@ import org.imdtv.iptvtv.data.repo.ProviderRepository
 import org.imdtv.iptvtv.data.repo.channel
 import org.imdtv.iptvtv.data.repo.live
 import org.imdtv.iptvtv.data.settings.SettingsRepository
-import org.imdtv.iptvtv.data.settings.ThemeId
+import org.imdtv.iptvtv.data.settings.ThemeColour
 
 @RunWith(RobolectricTestRunner::class)
 class BackupTest {
@@ -74,7 +74,7 @@ class BackupTest {
         providers.addEpgSource(p, "http://guide/uk.xml", "UK guide")
         db.providerDao().setCategoryStrip(p, "UK|")
         db.epgDao().sources(p).first().let { db.epgDao().setOffset(it.id, 60) }
-        settings.update { it.copy(theme = ThemeId.LIQUID_GLASS, confirmExit = false, epgDaysToKeep = 3) }
+        settings.update { it.copy(themeColour = ThemeColour.RED, confirmExit = false, epgDaysToKeep = 3) }
         return p
     }
 

@@ -1,12 +1,14 @@
 package org.imdtv.iptvtv.ui.live
 
-import org.imdtv.iptvtv.ui.theme.glass
-import org.imdtv.iptvtv.ui.theme.LocalGlassBackdrop
+import org.imdtv.iptvtv.ui.theme.fadeListEdges
+import org.imdtv.iptvtv.ui.theme.railBackground
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import org.imdtv.iptvtv.ui.theme.LocalTheme
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +33,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -71,10 +76,11 @@ internal fun Rail(
         }
     }
     Column(
-        Modifier.fillMaxHeight().width(260.dp)
-            .then(if (LocalGlassBackdrop.current != null) Modifier.glass(RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp))
-                else Modifier.shadow(30.dp).background(LocalTheme.current.colors.panel))
-            .padding(horizontal = 20.dp, vertical = 35.dp)
+        Modifier.fillMaxHeight().width(350.dp)
+            // Full height against the left edge. Solid at the edge, melting into the guide on the right the way the
+            // preview picture melts into the background (a fade, not a true blur: that would be too heavy for a TV box).
+            .railBackground(LocalTheme.current.colors.panel)
+            .padding(start = 4.dp, end = 38.dp, top = 30.dp) // no bottom padding: the list runs to the screen's bottom edge
             .onPreviewKeyEvent { e ->
                 val down = e.type == KeyEventType.KeyDown
                 if (move != null) {
@@ -91,14 +97,20 @@ internal fun Rail(
                 if (down && (e.key == Key.Back || e.key == Key.DirectionLeft)) { onClose(); true } else false
             },
     ) {
-        Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(start = 28.dp, end = 28.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("CATEGORIES", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = LocalTheme.current.colors.muted, letterSpacing = 2.sp,
                 modifier = Modifier.weight(1f))
             AppLogo(Modifier.size(60.dp))
         }
         if (move != null) Text("Up/Down move · OK drop · Back cancel", fontSize = 11.sp, color = LocalTheme.current.colors.muted,
-            modifier = Modifier.padding(bottom = 8.dp))
-        LazyColumn(state = state, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            modifier = Modifier.padding(start = 28.dp, bottom = 8.dp))
+        LazyColumn(
+            state = state, verticalArrangement = Arrangement.spacedBy(8.dp),
+            // Room under the last category, so it can be scrolled up out of the fade at the bottom.
+            // Sideways room too: the highlighted row grows and glows, and the list's fade would otherwise cut it flat.
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 28.dp, end = 28.dp, top = 10.dp, bottom = 90.dp),
+            modifier = Modifier.weight(1f).fadeListEdges(state),
+        ) {
             itemsIndexed(items, key = { _, c -> c.entry.key }) { i, rc ->
                 val isMoving = rc.entry.key == movingKey
                 FocusBox(
@@ -109,15 +121,25 @@ internal fun Rail(
                         .then(if (rc.entry is RailEntry.Provider) Modifier.onLongOk { onLongPress(rc.entry) } else Modifier)
                         .onPreviewKeyEvent { e -> if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionRight) { onPick(rc.entry); true } else false },
                 ) { f ->
+                    val colors = LocalTheme.current.colors
+                    // The same pills as the guide's channel names: glass cells, a glowing light one where the remote is.
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(5.dp))
-                            .background(if (isMoving) Color(0xFFE5A00D) else if (f) LocalTheme.current.colors.focus else Color.Transparent)
-                            .padding(horizontal = 11.dp, vertical = 8.dp),
+                        Modifier.fillMaxWidth().height(40.dp)
+                            .graphicsLayer { val sc = if (f) 1.025f else 1f; scaleX = sc; scaleY = sc }
+                            .then(if (f) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = Color(0xFFA0BEFF), spotColor = Color(0xFFA0BEFF)) else Modifier)
+                            .background(
+                                if (isMoving) Color(0xFFE5A00D) else if (f) colors.focus else colors.cell,
+                                RoundedCornerShape(5.dp),
+                            )
+                            // The category being shown has a light edge, so it can be found again.
+                            .then(if (!f && !isMoving && rc.entry.key == selectedKey) Modifier.border(1.5.dp, Color(0xCCFFFFFF), RoundedCornerShape(5.dp)) else Modifier)
+                            .padding(horizontal = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        val fg = if (f || isMoving) LocalTheme.current.colors.onFocus else Color.White
-                        Text((if (isMoving) "↕ " else "") + rc.entry.title, fontSize = 14.sp, color = fg, maxLines = 1,
+                        val fg = if (f || isMoving) colors.onFocus else Color.White
+                        Text((if (isMoving) "↕ " else "") + rc.entry.title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = fg, maxLines = 1,
                             overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        Text(rc.count.toString(), fontSize = 11.sp, color = if (f || isMoving) fg else LocalTheme.current.colors.muted)
+                        Text("  " + rc.count, fontSize = 12.sp, color = fg.copy(alpha = .85f))
                     }
                 }
             }

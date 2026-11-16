@@ -1,18 +1,14 @@
-<p align="center"><img src="site/img/logo.png" alt="IMD TV" width="160"></p>
+# Lunaro (personal copy of IMD TV)
 
-# IMD TV
+A personal, hobby copy of **IMD TV**, the free and open source IPTV player for Android TV by
+[majorleeevil](https://github.com/majorleeevil/imd-tv), changed for private use. It is licensed under the same terms
+(GPL-3.0), and the original author's work and licence are kept (see `LICENSE`). It plays a playlist you already have
+(Xtream login or M3U link) and does not provide any channels or content.
 
-**Live TV, films and series on Android TV — free and open source.**
-
-[![Downloads](https://img.shields.io/github/downloads/majorleeevil/imd-tv/total)](https://github.com/majorleeevil/imd-tv/releases)
-
-IMD TV is a player for your own IPTV playlist (Xtream login or M3U link). It has a fast TV guide that keeps up with
-the remote, movies and series with posters and subtitles, six themes, and no ads or tracking.
-
-Website: https://majorleeevil.github.io/imd-tv/
-
-> IMD TV is a media player. It does not provide, sell or link to any channels or content — use the playlist you
-> already have from your provider.
+Changes in this copy: renamed Lunaro; one theme (Celestial Glass); a floating-style category panel and a guide that
+follows the highlighted programme; a playing menu with pause/play, audio, subtitles, quality, picture size, audio delay
+and other versions of a channel; the app always opens on the guide; gentler on the provider (no instant retries of a
+refused stream, delayed first sync); the self-updater and the original author's links removed.
 
 ## Features
 
@@ -23,19 +19,18 @@ Website: https://majorleeevil.github.io/imd-tv/
 - **Recording** — record live TV now or schedule a programme from the guide, to the box, a USB drive or a network
   share (SMB), and watch it later with resume. Turn it on in Settings › Playback › Recording.
 - **Channel logos** — open-source logos (tv-logos), your playlist's, or your own logo pack.
-- **Six themes** — Celestial Glass, Celestial +, Celestial Retro, Liquid Glass, Xcube 360 and Gamestation.
+- **Four themes** — Celestial Glass, Celestial +, Celestial Retro and Liquid Glass.
 - **Backup & restore** — move your setup to a new box; logins are never written to the backup file.
 - **Private** — no accounts, no ads, no analytics. Logins are encrypted on the device.
 
 ## Screenshots
 
-Six themes, all with the same fast guide:
+Four themes, all with the same fast guide:
 
 | | |
 |---|---|
 | ![Celestial Glass](site/img/themes/celestial-glass.webp) Celestial Glass | ![Celestial +](site/img/themes/celestial-plus.webp) Celestial + |
 | ![Celestial Retro](site/img/themes/celestial-retro.webp) Celestial Retro | ![Liquid Glass](site/img/themes/liquid-glass.webp) Liquid Glass |
-| ![Xcube 360](site/img/themes/xcube-360.webp) Xcube 360 | ![Gamestation](site/img/themes/gamestation.webp) Gamestation |
 
 | | |
 |---|---|

@@ -1,9 +1,7 @@
 package org.imdtv.iptvtv.ui.settings
 
 import org.imdtv.iptvtv.ui.theme.LocalTheme
-import org.imdtv.iptvtv.ui.theme.LocalGlassBackdrop
-import org.imdtv.iptvtv.ui.theme.glass
-import org.imdtv.iptvtv.ui.theme.themeBackground
+import org.imdtv.iptvtv.ui.theme.guideBackground
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -120,9 +118,9 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
     LaunchedEffect(Unit) { withFrameNanos { }; runCatching { if (initialGroup != SettingsGroup.PLAYLISTS || editedPlaylist != null) rowsFocus.requestFocus() else groupFocus.requestFocus() } }
     BackHandler(enabled = inRows) { runCatching { groupFocus.requestFocus() } }
 
-    Box(Modifier.fillMaxSize().themeBackground(LocalTheme.current.colors.vodBg)) {
+    Box(Modifier.fillMaxSize().guideBackground()) {
         Row(Modifier.fillMaxSize().padding(48.dp), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
-            Column(Modifier.width(260.dp).glass().padding(if (LocalGlassBackdrop.current != null) 12.dp else 0.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.width(260.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Settings", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, color = Color.White, modifier = Modifier.padding(bottom = 16.dp))
                 SettingsGroup.entries.forEach { g ->
                     FocusBox(
@@ -139,7 +137,7 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
                     }
                 }
             }
-            val pane = Modifier.weight(1f).glass().padding(if (LocalGlassBackdrop.current != null) 16.dp else 0.dp).onFocusChanged { inRows = it.hasFocus }
+            val pane = Modifier.weight(1f).onFocusChanged { inRows = it.hasFocus }
                     // Enter on the first row; Up/Down past the ends stay put instead of jumping into the group list.
                     .focusProperties {
                         enter = { enterTarget.value ?: rowsFocus }
@@ -194,10 +192,7 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
                     }
                     SettingsGroup.APPEARANCE -> AppearanceRows(s, first, onTheme = { t -> vm.update { it.copy(theme = t) } }, onColour = { c -> vm.update { it.copy(themeColour = c) } })
                     SettingsGroup.BEHAVIOUR -> {
-                        SwitchRow("Last channel on start", "Open the last live channel full screen when the app starts", s.lastChannelOnStart, first) { on ->
-                            vm.update { it.copy(lastChannelOnStart = on) }
-                        }
-                        SwitchRow("Confirm exit", "Press Back twice at the top menu to leave the app", s.confirmExit) { on ->
+                        SwitchRow("Confirm exit", "Press Back twice at the top menu to leave the app", s.confirmExit, first) { on ->
                             vm.update { it.copy(confirmExit = on) }
                         }
                         StartOnBootRow(s.startOnBoot) { on -> vm.update { it.copy(startOnBoot = on) } }
@@ -213,7 +208,6 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
                 }
             }
         }
-        // Drawn last so a glass pane (Liquid Glass) never covers it.
         AppLogo(Modifier.align(Alignment.TopEnd).padding(top = 24.dp, end = 48.dp).size(64.dp))
     }
 }
@@ -251,11 +245,11 @@ fun SettingRow(
 fun SwitchRow(title: String, explanation: String, checked: Boolean, modifier: Modifier = Modifier, onToggle: (Boolean) -> Unit) =
     SettingRow(title, explanation, null, modifier, toggle = checked) { onToggle(!checked) }
 
-/** Slider switch (TiviMate style): the theme accent fills the track when on; the white knob sits at that end. */
+/** Slider switch (TiviMate style): a deep blue fills the track when on; the white knob sits at that end. */
 @Composable
 fun Toggle(on: Boolean, focused: Boolean) {
     val off = if (focused) Color(0xFFB0B0B0) else Color(0x40FFFFFF)
-    Box(Modifier.size(44.dp, 24.dp).clip(RoundedCornerShape(12.dp)).background(if (on) LocalTheme.current.colors.accent else off).padding(3.dp),
+    Box(Modifier.size(44.dp, 24.dp).clip(RoundedCornerShape(12.dp)).background(if (on) Color(0xFF1B3A9E) else off).padding(3.dp),
         contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
         Box(Modifier.size(18.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White))
     }

@@ -35,6 +35,8 @@ class CatalogueSyncWorker(context: Context, params: WorkerParameters) : Coroutin
                 "catalogue-sync", ExistingWorkPolicy.KEEP,
                 OneTimeWorkRequestBuilder<CatalogueSyncWorker>()
                     .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                    // Not the instant the app opens: a launch (or several quick ones) shouldn't hit the provider with a burst of requests.
+                    .setInitialDelay(20, java.util.concurrent.TimeUnit.SECONDS)
                     .build(),
             )
         }

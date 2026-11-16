@@ -18,7 +18,6 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
     private val themeColour = stringPreferencesKey("theme_colour")
     private val autoplay = booleanPreferencesKey("autoplay_on_scroll")
     private val decoder = stringPreferencesKey("audio_decoder")
-    private val lastChannelOnStart = booleanPreferencesKey("last_channel_on_start")
     private val confirmExit = booleanPreferencesKey("confirm_exit")
     private val startOnBoot = booleanPreferencesKey("start_on_boot")
     private val interval = intPreferencesKey("epg_update_interval_hours")
@@ -65,7 +64,6 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
             themeColour = ThemeColour.entries.find { it.name == this[themeColour] } ?: d.themeColour,
             autoplayOnScroll = this[autoplay] ?: d.autoplayOnScroll,
             audioDecoder = this[decoder]?.let { n -> AudioDecoder.entries.find { it.name == n } } ?: d.audioDecoder,
-            lastChannelOnStart = this[lastChannelOnStart] ?: d.lastChannelOnStart,
             confirmExit = this[confirmExit] ?: d.confirmExit,
             startOnBoot = this[startOnBoot] ?: d.startOnBoot,
             epgUpdateIntervalHours = this[interval] ?: d.epgUpdateIntervalHours,
@@ -103,7 +101,6 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
         this[themeColour] = s.themeColour.name
         this[autoplay] = s.autoplayOnScroll
         this[decoder] = s.audioDecoder.name
-        this[lastChannelOnStart] = s.lastChannelOnStart
         this[confirmExit] = s.confirmExit
         this[startOnBoot] = s.startOnBoot
         this[interval] = s.epgUpdateIntervalHours

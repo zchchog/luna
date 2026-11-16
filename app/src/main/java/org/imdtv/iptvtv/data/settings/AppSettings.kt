@@ -1,7 +1,7 @@
 package org.imdtv.iptvtv.data.settings
 
 /** Layout themes (spec §6A); each sub-stage appends its entry, so the drop-down lists only built themes. */
-enum class ThemeId(val label: String) { CELESTIAL_GLASS("Celestial Glass"), CELESTIAL_PLUS("Celestial +"), CELESTIAL_RETRO("Celestial Retro"), LIQUID_GLASS("Liquid Glass"), XCUBE_180("Xcube 360"), GAMESTATION("Gamestation") }
+enum class ThemeId(val label: String) { CELESTIAL_GLASS("Celestial Glass") }
 
 /** A stored theme name this build doesn't know (old SKY_GLASS/MIDNIGHT…, or a newer build's theme) reads as the default. */
 fun themeIdOf(stored: String?): ThemeId = ThemeId.entries.find { it.name == stored } ?: ThemeId.CELESTIAL_GLASS
@@ -39,7 +39,6 @@ data class AppSettings(
     val theme: ThemeId = ThemeId.CELESTIAL_GLASS,
     val autoplayOnScroll: Boolean = false,
     val audioDecoder: AudioDecoder = AudioDecoder.SOFTWARE,
-    val lastChannelOnStart: Boolean = true,
     val confirmExit: Boolean = true,
     val startOnBoot: Boolean = false,
     val epgUpdateIntervalHours: Int = 12,

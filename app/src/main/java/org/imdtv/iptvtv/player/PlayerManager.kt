@@ -3,6 +3,7 @@ package org.imdtv.iptvtv.player
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
@@ -16,6 +17,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Format
 import androidx.media3.common.Tracks
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
@@ -34,6 +36,8 @@ import kotlinx.coroutines.flow.StateFlow
 /** The app's single ExoPlayer. Create and use on the main thread. */
 @OptIn(UnstableApi::class)
 class PlayerManager(private val context: Context) {
+    private val avOffset = AvOffset()
+
     /** The mode [player] was built with. A change waits until the player is idle (spec §4.4). */
     var audioDecoder: AudioDecoder = AudioDecoder.SOFTWARE
         private set
@@ -53,8 +57,14 @@ class PlayerManager(private val context: Context) {
                 context: Context, extensionRendererMode: Int, mediaCodecSelector: MediaCodecSelector,
                 enableDecoderFallback: Boolean, eventHandler: Handler, eventListener: VideoRendererEventListener,
                 allowedVideoJoiningTimeMs: Long, out: ArrayList<Renderer>,
-            ) = super.buildVideoRenderers(context, EXTENSION_RENDERER_MODE_OFF, mediaCodecSelector, enableDecoderFallback,
-                eventHandler, eventListener, allowedVideoJoiningTimeMs, out)
+            ) {
+                super.buildVideoRenderers(context, EXTENSION_RENDERER_MODE_OFF, mediaCodecSelector, enableDecoderFallback,
+                    eventHandler, eventListener, allowedVideoJoiningTimeMs, out)
+                // The same renderer, but able to show the picture a little early or late (the Audio delay control).
+                val i = out.indexOfLast { it is androidx.media3.exoplayer.video.MediaCodecVideoRenderer }
+                if (i >= 0) out[i] = OffsetVideoRenderer(context, mediaCodecSelector, allowedVideoJoiningTimeMs,
+                    enableDecoderFallback, eventHandler, eventListener, avOffset)
+            }
         }.setExtensionRendererMode(
             if (d == AudioDecoder.SOFTWARE) DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
             else DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF,
@@ -128,6 +138,119 @@ class PlayerManager(private val context: Context) {
         if (f != _formats.value) Log.i(TAG, "formats $f ${a?.sampleMimeType} ${tail(url)}")
         _formats.value = f
     }
+    private val _pictureShowing = MutableStateFlow(false)
+    /** True once the window the stream is attached to has drawn a frame of it (false again whenever a window takes over). */
+    val pictureShowing: StateFlow<Boolean> = _pictureShowing
+
+    private val _paused = MutableStateFlow(false)
+    /** True while playback is paused by the viewer. */
+    val paused: StateFlow<Boolean> = _paused
+    private var pausedAt = 0L
+
+    private val _tracks = MutableStateFlow(StreamTracks.NONE)
+    /** The audio tracks, video qualities and subtitles of the stream playing now. */
+    val tracks: StateFlow<StreamTracks> = _tracks
+
+    private val _pictureSize = MutableStateFlow(PictureSize.FIT)
+    val pictureSize: StateFlow<PictureSize> = _pictureSize
+
+    private val _audioDelayMs = MutableStateFlow(0)
+    /** Audio delay in milliseconds: plus plays the sound later, minus earlier. Kept until the app closes. */
+    val audioDelayMs: StateFlow<Int> = _audioDelayMs
+
+    private fun readTracks() {
+        val audio = ArrayList<TrackOption>(); val video = ArrayList<TrackOption>(); val text = ArrayList<TrackOption>()
+        for ((gi, g) in player.currentTracks.groups.withIndex()) {
+            for (ti in 0 until g.length) {
+                if (!g.isTrackSupported(ti)) continue
+                val f = g.getTrackFormat(ti)
+                val on = g.isTrackSelected(ti)
+                when (g.type) {
+                    C.TRACK_TYPE_AUDIO -> TrackLabels.audio(f.language, f.label, f.sampleMimeType, f.channelCount, audio.size + 1)
+                        .let { (name, detail) -> audio += TrackOption(name, detail, on, gi, ti) }
+                    C.TRACK_TYPE_VIDEO -> TrackLabels.video(f.width, f.height, f.frameRate, f.bitrate)
+                        .let { (name, detail) -> video += TrackOption(name, detail, on, gi, ti) }
+                    C.TRACK_TYPE_TEXT -> TrackLabels.text(f.language, f.label, text.size + 1)
+                        .let { (name, detail) -> text += TrackOption(name, detail, on, gi, ti) }
+                }
+            }
+        }
+        val params = player.trackSelectionParameters
+        _tracks.value = StreamTracks(
+            audio = audio,
+            video = video.sortedByDescending { player.currentTracks.groups[it.group].getTrackFormat(it.track).height },
+            text = text,
+            autoQuality = params.overrides.values.none { it.type == C.TRACK_TYPE_VIDEO },
+            textOff = text.none { it.selected },
+        )
+    }
+
+    private fun override(o: TrackOption, type: Int) {
+        val g = player.currentTracks.groups.getOrNull(o.group) ?: return
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(type, false)
+            .setOverrideForType(TrackSelectionOverride(g.mediaTrackGroup, o.track))
+            .build()
+    }
+
+    fun selectAudio(o: TrackOption) = override(o, C.TRACK_TYPE_AUDIO)
+
+    /** A video quality, or null for automatic. */
+    fun selectVideo(o: TrackOption?) {
+        if (o == null) player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_VIDEO).build()
+        else override(o, C.TRACK_TYPE_VIDEO)
+    }
+
+    /** A subtitle track, or null for none. */
+    fun selectText(o: TrackOption?) {
+        if (o == null) player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
+        else override(o, C.TRACK_TYPE_TEXT)
+    }
+
+    fun setPictureSize(size: PictureSize) {
+        _pictureSize.value = size
+        view?.let { it.resizeMode = size.mode; applyShape(it) }
+    }
+
+    fun setAudioDelayMs(ms: Int) {
+        val v = ms.coerceIn(-MAX_DELAY_MS, MAX_DELAY_MS)
+        _audioDelayMs.value = v
+        avOffset.videoLeadUs = v * 1000L
+    }
+
+    /** Pause, or play again. After a long pause a live stream that can't be held starts over at the live picture. */
+    fun togglePause() {
+        if (url == null) return
+        val p = player
+        if (p.playWhenReady) {
+            p.pause()
+        } else if (SystemClock.elapsedRealtime() - pausedAt > LONG_PAUSE_MS && !p.isCurrentMediaItemSeekable && !vod) {
+            restart()
+        } else {
+            if (p.playbackState == Player.STATE_IDLE) p.prepare()
+            p.play()
+        }
+    }
+
+    /** Milliseconds behind the live picture; 0 when not known or not live. */
+    fun behindLiveMs(): Long {
+        if (!player.isCurrentMediaItemLive) return 0L
+        return player.currentLiveOffset.takeIf { it != C.TIME_UNSET } ?: 0L
+    }
+
+    /** Jump back to the live picture. */
+    fun goLive() {
+        if (player.isCurrentMediaItemSeekable) { player.seekToDefaultPosition(); player.play() } else restart()
+    }
+
+    /** The same stream, started again from scratch. */
+    private fun restart() {
+        val u = url ?: return
+        val ua = userAgent; val lg = login; val v = vod
+        stop()
+        play(u, ua, lg, v, guarded = false)
+    }
+
     private var userAgent: String? = null
     private var retries = 0
     private val retry = Runnable { player.prepare() }
@@ -141,13 +264,30 @@ class PlayerManager(private val context: Context) {
 
             override fun onIsPlayingChanged(isPlaying: Boolean) = onPlayingChanged(isPlaying)
 
-            override fun onTracksChanged(tracks: Tracks) = readFormats()
+            override fun onRenderedFirstFrame() { _pictureShowing.value = true }
 
-            override fun onVideoSizeChanged(videoSize: VideoSize) = readFormats()
+            override fun onTracksChanged(tracks: Tracks) { readFormats(); readTracks() }
+
+            override fun onTrackSelectionParametersChanged(parameters: TrackSelectionParameters) = readTracks()
+
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                _paused.value = !playWhenReady
+                if (!playWhenReady) pausedAt = SystemClock.elapsedRealtime()
+            }
+
+            override fun onVideoSizeChanged(videoSize: VideoSize) { readFormats(); view?.let(::applyShape) }
 
             override fun onPlayerError(error: PlaybackException) {
+                if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
+                    // Paused (or slow) for longer than the stream keeps: jump to the live picture rather than retrying the old spot.
+                    player.seekToDefaultPosition(); player.prepare(); return
+                }
                 Log.w(TAG, "error ${error.errorCodeName} ${tail(url)} (retry ${retries + 1}/$MAX_RETRIES)", error)
-                if (retries < MAX_RETRIES) {
+                // A refusal from the server (503, 403, 404...) is an answer, not a dropped connection: asking again straight away
+                // only looks like flooding to the provider, so report it. Real connection drops are still retried.
+                val refused = error.errorCode == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS ||
+                    error.errorCode == PlaybackException.ERROR_CODE_IO_FILE_NOT_FOUND
+                if (!refused && retries < MAX_RETRIES) {
                     handler.postDelayed(retry, 1000L shl retries++) // 1s, 2s, 4s
                 } else {
                     retries = 0
@@ -178,6 +318,8 @@ class PlayerManager(private val context: Context) {
         this.userAgent = userAgent
         this.login = login
         _formats.value = StreamFormats.UNKNOWN
+        _tracks.value = StreamTracks.NONE
+        _paused.value = false
         Log.i(TAG, "play ${tail(url)}")
         // Headers on the link (M3U #EXTVLCOPT or Kodi "url|User-Agent=…") win over the playlist's user agent.
         val req = org.imdtv.iptvtv.data.source.streamRequest(url, userAgent, login)
@@ -230,10 +372,30 @@ class PlayerManager(private val context: Context) {
     /** Moves the player to [view] without re-preparing, so playback continues uninterrupted. */
     fun attach(view: PlayerView) {
         if (this.view === view) return
+        _pictureShowing.value = false // the new window has not drawn the picture yet
         PlayerView.switchTargetView(player, this.view, view)
         this.view?.keepScreenOn = false
         this.view = view
+        view.resizeMode = _pictureSize.value.mode
         view.keepScreenOn = player.isPlaying
+        applyShape(view)
+        // The view works the shape out again from the stream a moment after it takes over, which briefly undoes ours: keep
+        // setting it through that moment, so the picture is never shown in the wrong shape.
+        for (wait in longArrayOf(60, 150, 300, 500, 800, 1300)) view.postDelayed({ if (this.view === view) applyShape(view) }, wait)
+    }
+
+    /**
+     * Tells [view] the shape of the picture. A view only learns it when the picture's size changes, so one that takes over
+     * a playing stream (corner preview <-> full screen) would otherwise keep a blank shape and stretch the picture to its box.
+     */
+    private fun applyShape(view: PlayerView) {
+        val v = player.videoSize
+        if (v.width <= 0 || v.height <= 0) return
+        val ratio = _pictureSize.value.ratio ?: pictureRatio(v.width, v.height, v.pixelWidthHeightRatio)
+        val frame = view.findViewById<androidx.media3.ui.AspectRatioFrameLayout>(androidx.media3.ui.R.id.exo_content_frame) ?: return
+        frame.setAspectRatio(ratio)
+        // The view sets the shape the stream states each time it learns the size; set ours again just after, so ours wins.
+        view.post { frame.setAspectRatio(ratio) }
     }
 
     fun detach(view: PlayerView) {
@@ -273,6 +435,8 @@ class PlayerManager(private val context: Context) {
         retries = 0
         url = null
         _formats.value = StreamFormats.UNKNOWN
+        _tracks.value = StreamTracks.NONE
+        _paused.value = false
         player.stop()
         player.clearMediaItems()
         applyDecoder()
@@ -280,6 +444,8 @@ class PlayerManager(private val context: Context) {
 
     private companion object {
         const val MAX_RETRIES = 3
+        const val LONG_PAUSE_MS = 20_000L
+        const val MAX_DELAY_MS = 300
         const val TAG = "IptvPlayer"
         /** Last path segment only: Xtream URLs carry the username and password. */
         fun tail(url: String?) = url?.substringBefore('|')?.substringAfterLast('/') // headers may hold tokens too

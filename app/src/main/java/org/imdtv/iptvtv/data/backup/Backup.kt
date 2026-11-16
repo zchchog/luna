@@ -57,7 +57,6 @@ data class BSettings(
     val themeColour: String = AppSettings().themeColour.name,
     val autoplayOnScroll: Boolean = AppSettings().autoplayOnScroll,
     val audioDecoder: String = AppSettings().audioDecoder.name,
-    val lastChannelOnStart: Boolean = AppSettings().lastChannelOnStart,
     val confirmExit: Boolean = AppSettings().confirmExit,
     val startOnBoot: Boolean = AppSettings().startOnBoot,
     val epgUpdateIntervalHours: Int = AppSettings().epgUpdateIntervalHours,
@@ -91,7 +90,6 @@ data class BSettings(
             themeColour = ThemeColour.entries.find { it.name == themeColour } ?: d.themeColour,
             autoplayOnScroll = autoplayOnScroll,
             audioDecoder = AudioDecoder.entries.find { it.name == audioDecoder } ?: d.audioDecoder,
-            lastChannelOnStart = lastChannelOnStart,
             confirmExit = confirmExit,
             startOnBoot = startOnBoot,
             epgUpdateIntervalHours = epgUpdateIntervalHours,
@@ -120,7 +118,7 @@ data class BSettings(
 
     companion object {
         fun of(s: AppSettings) = BSettings(
-            s.theme.name, s.themeColour.name, s.autoplayOnScroll, s.audioDecoder.name, s.lastChannelOnStart, s.confirmExit,
+            s.theme.name, s.themeColour.name, s.autoplayOnScroll, s.audioDecoder.name, s.confirmExit,
             s.startOnBoot, s.epgUpdateIntervalHours, s.epgUpdateOnStart, s.epgUpdateOnPlaylistChange, s.epgDaysToKeep,
             s.epgPastDays, s.matchTvLanguage, s.logoOrder.map { it.name }, s.guideOrder.map { it.name },
             s.borrowSiblingGuide, s.hideHeaderChannels, s.showDateTime, s.showPing, s.subtitlesOn, s.subtitleLanguage,
