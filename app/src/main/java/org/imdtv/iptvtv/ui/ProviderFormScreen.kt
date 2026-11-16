@@ -68,6 +68,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -118,6 +119,7 @@ private val KeyIcon = strokeIcon("M4 15a4 4 0 1 0 8 0a4 4 0 1 0 -8 0", "M11 12l9
 private val LinkIcon = strokeIcon("M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1", "M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1")
 private val InfoIcon = strokeIcon("M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0", "M12 8h.01M11 12h1v5h1")
 private val CheckIcon = strokeIcon("M5 12l5 5 9-10")
+private val ChatIcon = strokeIcon("M4 5h16v11H9l-5 4z")
 
 @Composable
 private fun Icon(v: ImageVector, tint: Color, size: androidx.compose.ui.unit.Dp) =
@@ -201,10 +203,25 @@ private fun Choose(onPick: (ProviderType) -> Unit) {
                     fontSize = 26.sp, lineHeight = 32.sp, color = Color.White)
                 Text("Choose how your TV service gave you your details. You only need to do this once.",
                     fontSize = 15.sp, lineHeight = 22.sp, color = Soft)
+                // Where to get an account, for people setting Luna up from scratch.
+                Row(Modifier.padding(top = 8.dp).panel().padding(horizontal = 15.dp, vertical = 13.dp),
+                    horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                    Icon(ChatIcon, BrandGlow, 20.dp)
+                    Text(
+                        androidx.compose.ui.text.buildAnnotatedString {
+                            append("No account yet? To get a subscription, message ")
+                            withStyle(androidx.compose.ui.text.SpanStyle(color = Color.White, fontWeight = FontWeight.SemiBold)) { append("@novadrop:matrix.org") }
+                            append(" on the ")
+                            withStyle(androidx.compose.ui.text.SpanStyle(color = Color.White, fontWeight = FontWeight.SemiBold)) { append("Element X") }
+                            append(" app.")
+                        },
+                        fontSize = 12.sp, lineHeight = 18.sp, color = Color(0xE6EFFBFC),
+                    )
+                }
             }
             Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
-                ChoiceCard("Sign in with a login", "Server, username and password", KeyIcon, Modifier.focusRequester(first)) { onPick(ProviderType.XTREAM) }
-                ChoiceCard("Use a playlist link", "A web address ending in .m3u", LinkIcon) { onPick(ProviderType.M3U) }
+                ChoiceCard("Xtream Codes", "Server, username and password", KeyIcon, Modifier.focusRequester(first)) { onPick(ProviderType.XTREAM) }
+                ChoiceCard("M3U playlist", "A web address ending in .m3u", LinkIcon) { onPick(ProviderType.M3U) }
             }
         }
         Text("Use the arrows on your remote to choose, then press OK", fontSize = 12.sp, color = Faint,
@@ -290,6 +307,11 @@ private fun LunaField(
     val shape = RoundedCornerShape(11.dp)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xCCEFFBFC))
+        // Selected text: a light teal wash, not the default dark blue.
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.foundation.text.selection.LocalTextSelectionColors provides
+                androidx.compose.foundation.text.selection.TextSelectionColors(handleColor = Color.White, backgroundColor = Color(0x66B5F1F4)),
+        ) {
         BasicTextField(
             value = value, onValueChange = onChange, singleLine = !multiLine, readOnly = !editing,
             interactionSource = interaction,
@@ -322,6 +344,7 @@ private fun LunaField(
                 }
             },
         )
+        }
     }
 }
 

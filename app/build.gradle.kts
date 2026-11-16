@@ -17,8 +17,8 @@ android {
         applicationId = "org.imdtv.iptvtv"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "0.7.1"
+        versionCode = 11
+        versionName = "0.7.2"
     }
 
     // Release key, kept outside the repo: ~/.config/iptv-tv/keystore.properties (storeFile, storePassword, keyAlias,
