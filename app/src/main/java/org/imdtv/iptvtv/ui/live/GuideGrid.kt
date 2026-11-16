@@ -115,8 +115,9 @@ fun GuideGrid(
         // The list reaches [GLOW_ROOM] further left than the grid does, and its rows start that far in, so they stay where they were.
         // The highlighted channel glows and grows a little; without the room, the list's edge cut that off flat on the left.
         Box(Modifier.fillMaxSize().widenToTheLeft(GLOW_ROOM).fadeListEdges(state.list, bottom = 90.dp, top = 22.dp)) {
-            // Room under the last channel, so it can be scrolled up out of the fade at the bottom of the screen.
-            LazyColumn(state = state.list, verticalArrangement = Arrangement.spacedBy(style.gap), contentPadding = PaddingValues(start = GLOW_ROOM, bottom = 110.dp), modifier = Modifier.fillMaxSize()) {
+            // Room under the last channel, so it can be scrolled up out of the fade at the bottom of the screen; 10dp on top so
+            // the first channel (which grows and glows when highlighted) doesn't touch the Today/times bar.
+            LazyColumn(state = state.list, verticalArrangement = Arrangement.spacedBy(style.gap), contentPadding = PaddingValues(start = GLOW_ROOM, top = 10.dp, bottom = 110.dp), modifier = Modifier.fillMaxSize()) {
                 itemsIndexed(channels, key = { _, ch -> ch.id }) { i, ch ->
                     GuideRow(
                         ch, ch.displayName(strip), programmes[ch.id].orEmpty(), now, at, windowStart, style, isFocused = focused?.id == ch.id && !state.railOpen && state.heldFocus == null,
