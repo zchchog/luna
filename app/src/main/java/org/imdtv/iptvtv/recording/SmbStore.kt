@@ -107,7 +107,7 @@ fun testShare(s: SmbSettings): String? = try {
         c.share.makeFolders(s.folder)
         val path = pathIn(s.folder, ".imdtv-test")
         c.share.openFile(path, setOf(AccessMask.GENERIC_WRITE), null, SMB2ShareAccess.ALL, SMB2CreateDisposition.FILE_OVERWRITE_IF, null)
-            .use { f -> f.outputStream.use { it.write("Lunaro".toByteArray()) } }
+            .use { f -> f.outputStream.use { it.write("Luna".toByteArray()) } }
         c.share.rm(path)
     }
     null

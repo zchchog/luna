@@ -27,8 +27,8 @@ fun UpdatePrompt(updater: Updater, background: CoroutineScope) {
     val scope = rememberCoroutineScope()
     val u = update ?: return
     if (!open) return
-    MenuFrame("Lunaro ${u.version} is available", onDismiss = { scope.launch { updater.later() } }) { first ->
-        val body = error ?: progress ?: u.notes.ifBlank { "A new version of Lunaro is ready to install." }
+    MenuFrame("Luna ${u.version} is available", onDismiss = { scope.launch { updater.later() } }) { first ->
+        val body = error ?: progress ?: u.notes.ifBlank { "A new version of Luna is ready to install." }
         Text(body, fontSize = 15.sp, color = Color.White, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp))
         if (progress != null) MenuItem("Hide", Modifier.focusRequester(first)) { updater.prompt.value = false }
         else {

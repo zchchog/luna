@@ -20,13 +20,13 @@ import org.imdtv.iptvtv.BuildConfig
 
 /**
  * Settings > About. Plain lines, not boxes: only the update button can be pressed.
- * This is Lunaro's own version of the free, open source "IMD TV" player by majorleeevil; the GPL-3.0 licence requires keeping
+ * This is Luna's own version of the free, open source "IMD TV" player by majorleeevil; the GPL-3.0 licence requires keeping
  * that credit and the licence, so the last line says so.
  */
 @Composable
 fun AboutRows(first: Modifier) {
     var result by remember { mutableStateOf<String?>(null) }
-    Text("Created by Lunaro Developers", fontSize = 18.sp, color = Color.White, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
+    Text("Created by Luna Developers", fontSize = 18.sp, color = Color.White, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
     Text("Version ${BuildConfig.VERSION_NAME}", fontSize = 16.sp, color = Color.White, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
     Text("Based off modified version of IMD TV (GPL-3.0)", fontSize = 16.sp, color = Color.White, modifier = Modifier.padding(start = 4.dp, bottom = 18.dp))
     // Checks github.com/zchchog/lunaro-tv; OK opens the update prompt when a newer version is out.
@@ -35,7 +35,7 @@ fun AboutRows(first: Modifier) {
     var checking by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val u = update
-    SettingRow("Check for updates", result ?: if (u != null) "Version ${u.version} is available. Press OK to update" else "Look for a newer version of Lunaro",
+    SettingRow("Check for updates", result ?: if (u != null) "Version ${u.version} is available. Press OK to update" else "Look for a newer version of Luna",
         null, first, busy = checking) {
         if (u != null) updater.prompt.value = true
         else if (!checking) scope.launch {

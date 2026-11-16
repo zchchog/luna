@@ -70,7 +70,7 @@ internal fun MenuFrame(title: String, onDismiss: () -> Unit, content: @Composabl
             Modifier.onPreviewKeyEvent { e ->
                 if (armed || e.key !in OK_KEYS) return@onPreviewKeyEvent false
                 if (e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) { armed = true; false } else true
-            }.width(420.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xF2101A3A)).padding(20.dp)
+            }.width(420.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xF2072A31)).padding(20.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {

@@ -148,5 +148,5 @@ fun Modifier.onLongOk(action: () -> Unit): Modifier = composed {
 fun AppLogo(modifier: Modifier = Modifier) =
     Box(modifier, contentAlignment = Alignment.Center) {
         // The name as text (never next to the icon).
-        Text("Lunaro", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, softWrap = false)
+        Text("Luna", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1, softWrap = false)
     }

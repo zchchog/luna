@@ -27,12 +27,12 @@ fun colorsOf(id: ThemeId, colour: ThemeColour = ThemeColour.DEFAULT): ThemeColor
 }
 
 private fun baseColors(id: ThemeId): ThemeColors = when (id) {
-    // Spec §6A.3: the old blue ~10% darker.
+    // Luna: teal everywhere (no blue left over from the old look).
     ThemeId.CELESTIAL_GLASS -> ThemeColors(
-        bg = listOf(Color(0xFF0A1753), Color(0xFF1A39A6), Color(0xFF3459CA)),
-        panel = Color(0xF0071040), cell = Color(0x8C3F63CF), cellDim = Color(0x59365ABD),
-        focus = Color(0xFFEEF3FF), onFocus = Color(0xFF0A1753), accent = Color(0xFFE5A00D),
-        text = Color.White, muted = Color(0x9EFFFFFF), vodBg = Color(0xFF0A1440), vodCard = Color(0xFF16245E),
+        bg = listOf(Color(0xFF06323A), Color(0xFF0D6F7A), Color(0xFF1C9AA0)),
+        panel = Color(0xF0052228), cell = Color(0x8C2BA2A8), cellDim = Color(0x591C9AA0),
+        focus = Color(0xFFEFFBFC), onFocus = Color(0xFF06323A), accent = Color(0xFF5FD6DC),
+        text = Color.White, muted = Color(0x9EFFFFFF), vodBg = Color(0xFF052A31), vodCard = Color(0xFF0A4650),
     )
 }
 

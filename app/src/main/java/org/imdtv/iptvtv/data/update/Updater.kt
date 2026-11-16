@@ -48,7 +48,7 @@ fun isNewer(tag: String, current: String): Boolean {
 
 /**
  * One-click updates from GitHub Releases: the latest release's lunaro-tv.apk goes to Android's installer, which asks
- * the user to confirm (and, the first time, to allow installs from Lunaro). Releases must keep the same signing key.
+ * the user to confirm (and, the first time, to allow installs from Luna). Releases must keep the same signing key.
  */
 class Updater(private val context: Context, private val http: OkHttpClient, private val json: Json, private val prefs: DataStore<Preferences>) {
     val available = MutableStateFlow<Update?>(null)

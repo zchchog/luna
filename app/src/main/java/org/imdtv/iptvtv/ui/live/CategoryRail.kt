@@ -126,7 +126,7 @@ internal fun Rail(
                     Row(
                         Modifier.fillMaxWidth().height(40.dp)
                             .graphicsLayer { val sc = if (f) 1.025f else 1f; scaleX = sc; scaleY = sc }
-                            .then(if (f) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = Color(0xFFA0BEFF), spotColor = Color(0xFFA0BEFF)) else Modifier)
+                            .then(if (f) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = Color(0xFFB5F1F4), spotColor = Color(0xFFB5F1F4)) else Modifier)
                             .background(
                                 if (isMoving) Color(0xFFE5A00D) else if (f) colors.focus else colors.cell,
                                 RoundedCornerShape(5.dp),

@@ -76,7 +76,7 @@ data class GridStyle(
 
 /** Celestial Glass: mockup 01, 420px per half hour (1dp = 2px on a 1080p TV). */
 // 5.9dp/min: 195 + 5 + 120 × 5.9 = 908dp fits between the 24dp margins (the TV's overscan cut off a grid that ran to the edge).
-val GLASS_GRID = GridStyle(36.dp, 195.dp, 5.9.dp, 120, 4.dp, FontWeight.Medium, focusedProgramme = Color(0x8C7891AA), roundedCells = true, textScale = 1.14f) // frosted glass
+val GLASS_GRID = GridStyle(36.dp, 195.dp, 5.9.dp, 120, 4.dp, FontWeight.Medium, focusedProgramme = Color(0x8C76A3A6), roundedCells = true, textScale = 1.14f) // frosted glass
 
 private val PILL = RoundedCornerShape(5.dp)
 private val BOX = RoundedCornerShape(2.dp)
@@ -159,7 +159,7 @@ private fun GuideRow(
             Row(
                 Modifier.fillMaxSize()
                     .graphicsLayer { val s = if (f && !style.boxed) 1.03f else 1f; scaleX = s; scaleY = s }
-                    .then(if (f && !style.boxed) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = Color(0xFFA0BEFF), spotColor = Color(0xFFA0BEFF)) else Modifier)
+                    .then(if (f && !style.boxed) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = Color(0xFFB5F1F4), spotColor = Color(0xFFB5F1F4)) else Modifier)
                     .background(if (f) colors.focus else colors.cell, if (style.boxed) BOX else PILL)
                     .padding(horizontal = 11.dp),
                 verticalAlignment = Alignment.CenterVertically,

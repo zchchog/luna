@@ -83,10 +83,10 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             val themeId = app.settings.collectAsState().value.theme
-            val themeColour = app.settings.collectAsState().value.themeColour
+            // Luna always uses the teal look; the saved colour choice is ignored.
             val density = androidx.compose.ui.platform.LocalDensity.current
             val conf = androidx.compose.ui.platform.LocalConfiguration.current
-            CompositionLocalProvider(LocalTheme provides remember(themeId, themeColour) { themeOf(themeId, themeColour) }) {
+            CompositionLocalProvider(LocalTheme provides remember(themeId) { themeOf(themeId, org.imdtv.iptvtv.data.settings.ThemeColour.TEAL) }) {
             MaterialTheme(colorScheme = darkColorScheme()) {
             // Celestial Glass and Liquid Glass: every TV Text in Inter (the website's font). Inside MaterialTheme, which
             // otherwise sets its own sans-serif text style over anything provided outside it.
