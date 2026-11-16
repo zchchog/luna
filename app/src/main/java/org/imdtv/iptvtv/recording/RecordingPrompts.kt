@@ -61,7 +61,7 @@ fun PromptHost(repo: RecordingRepository, onLeavePlayer: () -> Unit) {
             LaunchedEffect(q) { if (q.leavePlayer) onLeavePlayer(); delay(4_000); clear(q) }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                 Text(q.text, fontSize = 14.sp, color = Color.White, modifier = Modifier.padding(bottom = 40.dp)
-                    .background(Color(0xCC1A1C24), RoundedCornerShape(20.dp)).padding(horizontal = 20.dp, vertical = 9.dp))
+                    .background(Color(0xE6052228), RoundedCornerShape(20.dp)).padding(horizontal = 20.dp, vertical = 9.dp))
             }
         }
     }

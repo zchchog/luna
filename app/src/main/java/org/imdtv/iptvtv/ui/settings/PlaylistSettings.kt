@@ -67,7 +67,7 @@ fun PlaylistPage(
     LaunchedEffect(id) { withFrameNanos { }; runCatching { first.requestFocus() } }
     if (p == null) return
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(p.name, fontSize = 20.sp, color = Color.White, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
+        Text(p.name, fontSize = 20.sp, fontFamily = org.imdtv.iptvtv.ui.Montserrat, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = Color.White, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
         SettingRow("Edit", "URL, login and user agent", null, Modifier.focusRequester(first)) { onEdit(id) }
         if (activeId == id) SettingRow("In use", "This is the playlist the app is showing", null) { }
         else SettingRow("Use this playlist", "Show this playlist's channels, films and series", null) { onUse(id) }

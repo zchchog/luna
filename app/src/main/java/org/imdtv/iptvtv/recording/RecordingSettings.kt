@@ -59,7 +59,7 @@ fun RecordingPage(vm: SettingsViewModel, modifier: Modifier, first: FocusRequest
     }
 
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Recording", fontSize = 20.sp, color = Color.White, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
+        Text("Recording", fontSize = 20.sp, fontFamily = org.imdtv.iptvtv.ui.Montserrat, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = Color.White, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
         SwitchRow("Recording", "Record live channels from the guide (hold OK on a channel)", s.recordingOn, Modifier.focusRequester(first)) { on ->
             if (on) info = true else confirmOff = true
         }

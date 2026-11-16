@@ -104,7 +104,7 @@ fun ChannelPageView(
     // Coming back from a sub-page, the screen puts focus on the row that opened it instead.
     LaunchedEffect(page) { if (!restoring) { withFrameNanos { }; runCatching { first.requestFocus() } } }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(page.title, fontSize = 20.sp, color = Color.White, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
+        Text(page.title, fontSize = 20.sp, fontFamily = org.imdtv.iptvtv.ui.Montserrat, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = Color.White, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
         when (page) {
             ChannelPage.CHANNEL_LOGOS -> { BackHandler(onBack = onClose); ChannelLogosPage(vm, first) }
             ChannelPage.CATEGORIES -> { BackHandler(onBack = onClose); PageRows(listOf(ChannelPage.LANGUAGES, ChannelPage.YOUR_CATEGORIES, ChannelPage.PROVIDER_CATEGORIES, ChannelPage.CATEGORY_NAME_CLEANUP), vm, first, openers, onOpen) }

@@ -121,7 +121,7 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
     Box(Modifier.fillMaxSize().guideBackground()) {
         Row(Modifier.fillMaxSize().padding(48.dp), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
             Column(Modifier.width(260.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Settings", fontSize = 26.sp, fontWeight = FontWeight.SemiBold, color = Color.White, modifier = Modifier.padding(bottom = 16.dp))
+                Text("Settings", fontSize = 26.sp, fontFamily = org.imdtv.iptvtv.ui.Montserrat, fontWeight = FontWeight.SemiBold, color = Color.White, modifier = Modifier.padding(bottom = 16.dp))
                 // Appearance is hidden: the app always uses the teal look (MainActivity).
                 SettingsGroup.entries.filter { it != SettingsGroup.APPEARANCE }.forEach { g ->
                     FocusBox(
@@ -165,7 +165,7 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
             if (sourcesOpen) EpgSourcesPage(vm, pane, rowsFocus) { park(); reopenSources = true; sourcesOpen = false }
             if (recordingOpen) org.imdtv.iptvtv.recording.RecordingPage(vm, pane, rowsFocus) { park(); reopenRecording = true; recordingOpen = false }
             if (page == null && playlist == null && !sourcesOpen && !recordingOpen) Column(pane.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(group.title, fontSize = 20.sp, color = Color.White, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
+                Text(group.title, fontSize = 20.sp, fontFamily = org.imdtv.iptvtv.ui.Montserrat, fontWeight = FontWeight.SemiBold, color = Color.White, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
                 // The first row of a group takes rowsFocus, so OK/Right on a group lands on it.
                 val first = Modifier.focusRequester(rowsFocus)
                 when (group) {

@@ -147,8 +147,6 @@ fun Modifier.onLongOk(action: () -> Unit): Modifier = composed {
 @Composable
 fun AppLogo(modifier: Modifier = Modifier) =
     Box(modifier, contentAlignment = Alignment.Center) {
-        // The name as text (never next to the icon), in Montserrat SemiBold like the TV banner (bundled in res/font:
-        // Fire TV can't download fonts; licence in licenses/Montserrat-OFL.txt).
-        Text("LUNA", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, color = Color.White, maxLines = 1, softWrap = false,
-            fontFamily = androidx.compose.ui.text.font.FontFamily(androidx.compose.ui.text.font.Font(org.imdtv.iptvtv.R.font.montserrat_semibold, FontWeight.SemiBold)))
+        // The name as text (never next to the icon): the glossy Montserrat "LUNA", as on the TV banner (ui/Brand.kt).
+        LunaWordmark(17.sp, 2.sp)
     }

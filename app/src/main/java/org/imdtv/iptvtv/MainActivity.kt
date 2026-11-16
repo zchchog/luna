@@ -195,6 +195,9 @@ class MainActivity : ComponentActivity() {
                         if ((app.stack.value.last() as? Screen.Player)?.live == true) app.back()
                     }
                     org.imdtv.iptvtv.data.update.UpdatePrompt((application as IptvApp).container.updater, (application as IptvApp).container.background)
+                    // Opening screen when Luna starts from closed (kept dismissed across rotation/recreation).
+                    var splash by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(true) }
+                    if (splash) org.imdtv.iptvtv.ui.LunaSplash { splash = false }
                     if (exitHint) Text(
                         buildAnnotatedString {
                             append("Press ")
@@ -202,7 +205,7 @@ class MainActivity : ComponentActivity() {
                             append(" to exit application")
                         }, fontSize = 14.sp, color = Color.White,
                         modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 40.dp)
-                            .background(Color(0xCC1A1C24), RoundedCornerShape(20.dp)).padding(horizontal = 20.dp, vertical = 9.dp),
+                            .background(Color(0xE6052228), RoundedCornerShape(20.dp)).padding(horizontal = 20.dp, vertical = 9.dp),
                     )
                 }
             }

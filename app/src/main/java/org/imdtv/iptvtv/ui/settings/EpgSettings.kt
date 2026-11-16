@@ -107,7 +107,7 @@ fun EpgSourcesPage(vm: SettingsViewModel, modifier: Modifier, first: FocusReques
     val providers by vm.providers.collectAsState()
     LaunchedEffect(Unit) { withFrameNanos { }; runCatching { first.requestFocus() } }
     Column(modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("EPG sources", fontSize = 20.sp, color = Color.White, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
+        Text("EPG sources", fontSize = 20.sp, fontFamily = org.imdtv.iptvtv.ui.Montserrat, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, color = Color.White, modifier = Modifier.padding(top = 6.dp, bottom = 18.dp))
         providers.forEachIndexed { i, p ->
             key(p.id) {
                 val sources by remember(p.id) { vm.sources(p.id) }.collectAsState(emptyList())
