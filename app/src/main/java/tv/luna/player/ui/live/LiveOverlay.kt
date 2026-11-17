@@ -1,5 +1,7 @@
 package tv.luna.player.ui.live
 
+import kotlinx.coroutines.launch
+
 import tv.luna.player.ui.theme.smokedGlass
 import tv.luna.player.data.settings.ThemeId
 import tv.luna.player.ui.theme.LocalTheme
@@ -71,7 +73,7 @@ import tv.luna.player.ui.FocusBox
 import tv.luna.player.ui.clockTime
 
 /** What the viewer is adjusting in a popup. */
-private enum class Popup { AUDIO, SUBTITLES, QUALITY, PICTURE, DELAY, VERSIONS }
+private enum class Popup { AUDIO, SUBTITLES, QUALITY, PICTURE, DELAY, VERSIONS, RECORD_WHERE }
 
 /**
  * The info and controls over live full screen. Focus starts on Pause/Play; the row of controls opens popups for audio,
@@ -101,6 +103,10 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
     val tracks by player.tracks.collectAsState()
     val pictureSize by player.pictureSize.collectAsState()
     val delayMs by player.audioDelayMs.collectAsState()
+    val recordingOn by vm.recordingOn.collectAsState()
+    val recordingOnChannel by vm.recordingOnChannel.collectAsState()
+    val recordingId = recordingOnChannel[ch.id]
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     // The same channel offered in other qualities (HD, 4K...), found in the playlist.
     val versions by androidx.compose.runtime.produceState(emptyList<ChannelEntity>(), ch.id) { value = vm.versionsOf(ch) }
@@ -138,13 +144,11 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
                     Text(cur?.title ?: "No guide information", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Color.White,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        if (cur != null && progress != null) {
-                            Text("${clockTime(cur.start)} – ${clockTime(cur.stop)}", fontSize = 13.sp, color = Color.White)
-                            Box(Modifier.size(120.dp, 3.dp).clip(RoundedCornerShape(2.dp)).background(Color(0x33FFFFFF))) {
-                                Box(Modifier.fillMaxHeight().fillMaxWidth(progress).background(Color.White))
-                            }
-                            Text("${(cur.stop - now + 59_999) / 60_000} min left", fontSize = 13.sp, color = LocalTheme.current.colors.muted)
-                        }
+                        Text("LIVE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF06323A),
+                            modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFF5FD6DC)).padding(horizontal = 6.dp, vertical = 1.dp))
+                        if (recordingId != null) Text("● REC", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White,
+                            modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFD64545)).padding(horizontal = 6.dp, vertical = 1.dp))
+                        if (cur != null) Text("${(cur.stop - now + 59_999) / 60_000} min left", fontSize = 13.sp, color = LocalTheme.current.colors.muted)
                     }
                     Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         val number = (ch.customNumber ?: ch.number)?.let { "$it  " }.orEmpty()
@@ -164,8 +168,13 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
                     }
                 }
             }
-            Box(Modifier.padding(top = 14.dp).fillMaxWidth().height(2.dp).background(Color(0x33FFFFFF))) {
-                if (progress != null) Box(Modifier.fillMaxHeight().fillMaxWidth(progress).background(Color.White))
+            // The programme's progress: a rounded teal bar with its start and end times either side.
+            if (cur != null && progress != null) Row(Modifier.padding(start = 48.dp, end = 48.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(clockTime(cur.start), fontSize = 12.sp, color = Color.White)
+                Box(Modifier.padding(horizontal = 12.dp).weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color(0x40FFFFFF))) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(progress).clip(RoundedCornerShape(3.dp)).background(Color(0xFF5FD6DC)))
+                }
+                Text(clockTime(cur.stop), fontSize = 12.sp, color = Color(0xCCEFFBFC))
             }
             Row(
                 Modifier.padding(start = 48.dp, end = 48.dp, top = 14.dp)
@@ -174,8 +183,18 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
                         if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown && !showStrip) { showStrip = true; true } else false
                     },
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                ControlButton(if (paused) "Play" else "Pause", null, player::togglePause, Modifier.focusRequester(pauseFocus)) { c -> PlayPauseIcon(paused, c) }
+                RoundControl(Modifier.focusRequester(pauseFocus), player::togglePause) { c -> PlayPauseIcon(paused, c) }
+                // Record this channel now (asks where to save the first time), or stop the recording.
+                RoundControl(Modifier.focusRequester(buttonFocus.getValue(Popup.RECORD_WHERE)), onClick = {
+                    when {
+                        recordingId != null -> vm.stopRecording(recordingId)
+                        recordingOn -> vm.recordNow(ch)
+                        else -> open(Popup.RECORD_WHERE)
+                    }
+                }) { c -> RecordIcon(recording = recordingId != null, c) }
+                Spacer(Modifier.width(6.dp))
                 ControlButton("Audio", tracks.audio.firstOrNull { it.selected }?.label ?: "Default", { open(Popup.AUDIO) },
                     Modifier.focusRequester(buttonFocus.getValue(Popup.AUDIO)))
                 ControlButton("Subtitles", if (tracks.textOff) "Off" else tracks.text.firstOrNull { it.selected }?.label ?: "On", { open(Popup.SUBTITLES) },
@@ -244,6 +263,16 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
                 if (versions.isEmpty()) "No other versions of this channel were found in your playlist." else null,
                 { i -> versions.getOrNull(i)?.takeIf { it.id != ch.id }?.let(onPick); popup = null }, popupModifier)
             Popup.DELAY -> DelayPopup(delayMs, player::setAudioDelayMs, { popup = null }, popupModifier)
+            Popup.RECORD_WHERE -> {
+                val drives = remember { vm.usbDrives() }
+                val places = buildList<Pair<String, (() -> Any)?>> {
+                    add("This box" to { scope.launch { vm.setRecordPlace(tv.luna.player.recording.RecStorage.INTERNAL); vm.recordNow(ch) } })
+                    drives.forEach { (name, path) -> add("USB drive: $name" to { scope.launch { vm.setRecordPlace(tv.luna.player.recording.RecStorage.USB, path); vm.recordNow(ch) } }) }
+                    if (drives.isEmpty()) add("USB drive (plug one in first)" to null)
+                }
+                ChoicePopup("Where should recordings go?", places.map { PopupRow(it.first, "", false) }, "Network shares are set up in Settings › Playback › Recording.",
+                    { i -> places.getOrNull(i)?.second?.let { it(); popup = null } }, popupModifier)
+            }
             null -> Unit
         }
     }
@@ -257,7 +286,7 @@ private fun ControlButton(
     label: String, value: String?, onClick: () -> Unit, modifier: Modifier = Modifier,
     icon: (@Composable (Color) -> Unit)? = null,
 ) {
-    FocusBox(onClick = onClick, modifier = modifier.width(114.dp).height(56.dp)) { f ->
+    FocusBox(onClick = onClick, modifier = modifier.width(100.dp).height(52.dp)) { f ->
         val fg = if (f) LocalTheme.current.colors.onFocus else Color.White
         Row(
             Modifier.fillMaxSize()
@@ -271,6 +300,28 @@ private fun ControlButton(
                 if (value != null) Text(value, fontSize = 11.sp, color = fg.copy(alpha = .75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
+    }
+}
+
+/** A round button in the controls row (play/pause, record): white with dark ink when highlighted. */
+@Composable
+private fun RoundControl(modifier: Modifier = Modifier, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
+    FocusBox(onClick = onClick, modifier = modifier) { f ->
+        Box(Modifier.size(52.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (f) Color(0xFFEFFBFC) else Color(0x33FFFFFF))
+            .border(1.dp, if (f) Color.Transparent else Color(0x40FFFFFF), androidx.compose.foundation.shape.CircleShape),
+            contentAlignment = Alignment.Center) { icon(if (f) Color(0xFF06323A) else Color.White) }
+    }
+}
+
+/** A red dot (record), or a red square in a ring while recording (stop). */
+@Composable
+private fun RecordIcon(recording: Boolean, color: Color) {
+    Canvas(Modifier.size(18.dp)) {
+        val red = Color(0xFFE05555)
+        if (recording) {
+            drawCircle(red, radius = size.minDimension / 2, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
+            drawRect(red, Offset(size.width * .32f, size.height * .32f), androidx.compose.ui.geometry.Size(size.width * .36f, size.height * .36f))
+        } else drawCircle(red, radius = size.minDimension * .42f)
     }
 }
 

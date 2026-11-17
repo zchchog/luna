@@ -28,6 +28,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -55,6 +56,9 @@ import tv.luna.player.data.repo.RailEntry
 import tv.luna.player.data.repo.RailItem
 import tv.luna.player.ui.FocusBox
 
+/** How far the guide moves right while the categories are open. */
+val RAIL_WIDTH = 236.dp
+
 /** Rail move mode (spec §4.3): Up/Down moves, OK drops, Back puts it back. */
 internal class RailMove(val cat: CategoryEntity, val from: Int)
 
@@ -76,11 +80,15 @@ internal fun Rail(
         }
     }
     Column(
-        Modifier.fillMaxHeight().width(350.dp)
-            // Full height against the left edge. Solid at the edge, melting into the guide on the right the way the
-            // preview picture melts into the background (a fade, not a true blur: that would be too heavy for a TV box).
-            .railBackground(LocalTheme.current.colors.panel)
-            .padding(start = 4.dp, end = 38.dp, top = 30.dp) // no bottom padding: the list runs to the screen's bottom edge
+        // Part of the screen, not a panel over it: the guide moves right to make room, and the background shows through.
+        Modifier.fillMaxHeight().width(RAIL_WIDTH)
+            // A faint line down its right side, fading out at both ends, so it reads as its own panel.
+            .drawBehind {
+                val w = 1.dp.toPx()
+                drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Transparent, .15f to Color(0x33EFFBFC), .8f to Color(0x33EFFBFC), 1f to Color.Transparent),
+                    topLeft = androidx.compose.ui.geometry.Offset(size.width - w, 0f), size = androidx.compose.ui.geometry.Size(w, size.height))
+            }
+            .padding(top = 4.dp) // no bottom padding: the list runs to the screen's bottom edge
             .onPreviewKeyEvent { e ->
                 val down = e.type == KeyEventType.KeyDown
                 if (move != null) {
@@ -97,18 +105,17 @@ internal fun Rail(
                 if (down && (e.key == Key.Back || e.key == Key.DirectionLeft)) { onClose(); true } else false
             },
     ) {
-        Row(Modifier.fillMaxWidth().padding(start = 28.dp, end = 28.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("CATEGORIES", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = LocalTheme.current.colors.muted, letterSpacing = 2.sp,
+        Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 14.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("CATEGORIES", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF5FD6DC), letterSpacing = 2.sp,
                 modifier = Modifier.weight(1f))
-            AppLogo(Modifier.size(60.dp))
         }
         if (move != null) Text("Up/Down move · OK drop · Back cancel", fontSize = 11.sp, color = LocalTheme.current.colors.muted,
-            modifier = Modifier.padding(start = 28.dp, bottom = 8.dp))
+            modifier = Modifier.padding(start = 24.dp, bottom = 8.dp))
         LazyColumn(
             state = state, verticalArrangement = Arrangement.spacedBy(8.dp),
             // Room under the last category, so it can be scrolled up out of the fade at the bottom.
             // Sideways room too: the highlighted row grows and glows, and the list's fade would otherwise cut it flat.
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 28.dp, end = 28.dp, top = 10.dp, bottom = 90.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 24.dp, end = 14.dp, top = 10.dp, bottom = 90.dp),
             modifier = Modifier.weight(1f).fadeListEdges(state),
         ) {
             itemsIndexed(items, key = { _, c -> c.entry.key }) { i, rc ->

@@ -29,11 +29,13 @@ sealed interface Prompt {
     data class RecordNowStopsWatching(val channel: String, val onRecord: () -> Unit) : Prompt
     /** [leavePlayer]: playback was stopped for a recording; a full-screen live player returns to the guide. */
     data class Notice(val text: String, val leavePlayer: Boolean = false) : Prompt
+    /** A TV guide reminder going off while Luna is open. */
+    data class Reminder(val title: String, val channel: String, val channelId: Long) : Prompt
 }
 
 /** Shows the repository's current [Prompt]; drawn last over every screen. [onLeavePlayer] returns a live player to the guide. */
 @androidx.compose.runtime.Composable
-fun PromptHost(repo: RecordingRepository, onLeavePlayer: () -> Unit) {
+fun PromptHost(repo: RecordingRepository, onWatch: (Long) -> Unit = {}, onLeavePlayer: () -> Unit) {
     val p by repo.prompt.collectAsState()
     fun clear(q: Prompt) { if (repo.prompt.value == q) repo.prompt.value = null }
     when (val q = p) {
@@ -56,6 +58,11 @@ fun PromptHost(repo: RecordingRepository, onLeavePlayer: () -> Unit) {
             Body("Recording needs your only connection, so watching will stop.")
             MenuItem("Record", Modifier.focusRequester(first)) { clear(q); q.onRecord(); onLeavePlayer() }
             MenuItem("Cancel", Modifier) { clear(q) }
+        }
+        is Prompt.Reminder -> MenuFrame("Starting now", onDismiss = { clear(q) }) { first ->
+            Body("${q.title} is starting on ${q.channel}.")
+            MenuItem("Watch now", Modifier.focusRequester(first)) { clear(q); onWatch(q.channelId) }
+            MenuItem("Dismiss", Modifier) { clear(q) }
         }
         is Prompt.Notice -> {
             LaunchedEffect(q) { if (q.leavePlayer) onLeavePlayer(); delay(4_000); clear(q) }

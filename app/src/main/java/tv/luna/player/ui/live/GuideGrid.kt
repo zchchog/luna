@@ -100,9 +100,10 @@ fun GuideGrid(
     val focused by vm.focused.collectAsState()
     val strip by vm.strip.collectAsState()
     val marks by vm.marks.collectAsState()
+    val reminderMarks by vm.reminderMarks.collectAsState()
     val recordingOnChannel by vm.recordingOnChannel.collectAsState()
     Column(modifier) {
-        Row(Modifier.height((25 * style.textScale).dp).drawBehind { drawRect(Color(0x33FFFFFF), Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) },
+        Row(Modifier.height((25 * style.textScale).dp), // no rule under the times: it read as a harsh line
             verticalAlignment = Alignment.Bottom) {
             Text(if (windowStart - now > 12 * 3600_000) "Later" else "Today", fontSize = (13 * style.textScale).sp, fontWeight = FontWeight.SemiBold,
                 color = style.headerColor ?: Color.White, modifier = Modifier.width(style.channelCol).padding(bottom = 5.dp))
@@ -120,20 +121,33 @@ fun GuideGrid(
             LazyColumn(state = state.list, verticalArrangement = Arrangement.spacedBy(style.gap), contentPadding = PaddingValues(start = GLOW_ROOM, top = 10.dp, bottom = 110.dp), modifier = Modifier.fillMaxSize()) {
                 itemsIndexed(channels, key = { _, ch -> ch.id }) { i, ch ->
                     GuideRow(
-                        ch, ch.displayName(strip), programmes[ch.id].orEmpty(), now, at, windowStart, style, isFocused = focused?.id == ch.id && !state.railOpen && state.heldFocus == null,
+                        ch, ch.displayName(strip), programmes[ch.id].orEmpty(), now, at, windowStart, style,
+                        isFocused = focused?.id == ch.id && !state.railOpen && state.heldFocus == null && !state.onChannel,
+                        channelSelected = state.onChannel,
                         marked = { p -> (ch.id to p.start) in marks || ch.id in recordingOnChannel && p.start <= now && now < p.stop },
+                        reminded = { p -> (ch.id to p.start) in reminderMarks },
                         modifier = (if (i == state.focusIndex) Modifier.focusRequester(state.rowFocus) else Modifier)
                             .onPreviewKeyEvent { e ->
                                 if (state.railOpen) return@onPreviewKeyEvent true // rail is taking focus; don't move the guide behind it
                                 if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
                                 when (e.key) {
-                                    Key.DirectionLeft -> { if (!vm.stepBack(programmes[ch.id].orEmpty())) { state.focusIndex = i; onLeftAtStart() }; true }
-                                    Key.DirectionRight -> { vm.stepForward(programmes[ch.id].orEmpty()); true }
+                                    // Left: back along the programmes, then onto the channel's name, then the categories.
+                                    Key.DirectionLeft -> {
+                                        if (state.onChannel) { state.onChannel = false; state.focusIndex = i; onLeftAtStart() }
+                                        else if (!vm.stepBack(programmes[ch.id].orEmpty())) state.onChannel = true
+                                        true
+                                    }
+                                    Key.DirectionRight -> { if (state.onChannel) state.onChannel = false else vm.stepForward(programmes[ch.id].orEmpty()); true }
                                     Key.DirectionUp -> if (i == 0 && onUpAtTop != null) { onUpAtTop(); true } else false
                                     else -> false
                                 }
                             }
-                            .onLongOk { state.focusIndex = i; state.menu = GuideMenu.Channel(ch) },
+                            // Hold OK: on a programme, Play / Record / Remind; on the channel's name, the channel's options.
+                            .onLongOk {
+                                state.focusIndex = i
+                                val p = programmes[ch.id].orEmpty().firstOrNull { it.start <= at && at < it.stop }
+                                state.menu = if (state.onChannel || p == null) GuideMenu.Channel(ch) else GuideMenu.Programme(ch, p)
+                            },
                         onFocused = { vm.focused.value = ch; state.focusIndex = i },
                         onClick = { state.onOk(ch, onFullScreen) },
                     )
@@ -151,17 +165,22 @@ fun GuideGrid(
 private fun GuideRow(
     ch: ChannelEntity, name: String, progs: List<GuideProgramme>, now: Long, at: Long, windowStart: Long, style: GridStyle, isFocused: Boolean,
     marked: (GuideProgramme) -> Boolean, modifier: Modifier, onFocused: () -> Unit, onClick: () -> Unit,
+    /** The highlight is on the channel names (the row with focus lights its name, not a programme). */
+    channelSelected: Boolean = false,
+    reminded: (GuideProgramme) -> Boolean = { false },
 ) {
     val colors = LocalTheme.current.colors
     Row(Modifier.height(style.rowHeight).then(if (style.rowDividers) Modifier.drawBehind {
         drawRect(Color(0x40FFFFFF), Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx()))
     } else Modifier)) {
-        FocusBox(onClick = onClick, onFocused = onFocused, modifier = modifier.width(style.channelCol - 5.dp).fillMaxHeight()) { f ->
+        FocusBox(onClick = onClick, onFocused = onFocused, modifier = modifier.width(style.channelCol - 5.dp).fillMaxHeight()) { focusedRow ->
+            // The name lights up fully only while the highlight is on it; on a programme, the row's name is just a little brighter.
+            val f = focusedRow && channelSelected
             Row(
                 Modifier.fillMaxSize()
                     .graphicsLayer { val s = if (f && !style.boxed) 1.03f else 1f; scaleX = s; scaleY = s }
                     .then(if (f && !style.boxed) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = Color(0xFFB5F1F4), spotColor = Color(0xFFB5F1F4)) else Modifier)
-                    .background(if (f) colors.focus else colors.cell, if (style.boxed) BOX else PILL)
+                    .background(if (f) colors.focus else if (focusedRow) Color(0x40FFFFFF) else colors.cell, if (style.boxed) BOX else PILL)
                     .padding(horizontal = 11.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -211,6 +230,7 @@ private fun GuideRow(
                 val runsBefore = style.overflowArrows && p.start < windowStart
                 val runsAfter = style.overflowArrows && p.stop > end
                 val rec = marked(p)
+                val bell = reminded(p)
                 Box(
                     Modifier.offset(x = style.dpPerMin * span.offsetMin).fillMaxHeight().then(cell)
                         // Separator (flat) or ◀ ▶ overflow marks (boxed), drawn in the same pass: no extra nodes.
@@ -222,6 +242,15 @@ private fun GuideRow(
                             if (runsAfter) drawPath(Path().apply { val x = size.width - 1f; moveTo(x, mid); lineTo(x - a, mid - a); lineTo(x - a, mid + a); close() }, mark)
                             // Scheduled or recording: a small red dot top-right.
                             if (rec) drawCircle(REC_DOT, 3.dp.toPx(), Offset(size.width - 7.dp.toPx(), 7.dp.toPx()))
+                            // Reminder set: a small teal bell (left of the recording dot when both).
+                            if (bell) {
+                                val cx = size.width - (if (rec) 18.dp else 8.dp).toPx(); val top = 3.dp.toPx(); val w = 7.dp.toPx(); val h = 6.dp.toPx()
+                                val c = if (focusedNow) style.focusedProgrammeText else BELL
+                                drawArc(c, 180f, 180f, true, Offset(cx - w / 2, top), Size(w, h * 1.2f))
+                                drawRect(c, Offset(cx - w / 2, top + h * .55f), Size(w, h * .45f))
+                                drawRect(c, Offset(cx - w * .7f, top + h * .95f), Size(w * 1.4f, 1.2.dp.toPx()))
+                                drawCircle(c, 1.2.dp.toPx(), Offset(cx, top + h * 1.25f))
+                            }
                         },
                     contentAlignment = Alignment.CenterStart,
                 ) {
@@ -234,6 +263,7 @@ private fun GuideRow(
 }
 
 private val REC_DOT = Color(0xFFE53935)
+private val BELL = Color(0xFF5FD6DC)
 
 private val GLOW_ROOM = 24.dp
 

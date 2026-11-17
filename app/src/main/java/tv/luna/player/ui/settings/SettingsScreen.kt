@@ -48,7 +48,7 @@ import tv.luna.player.ui.AppLogo
 import tv.luna.player.ui.FocusBox
 
 enum class SettingsGroup(val title: String) {
-    PLAYLISTS("Playlists"), CHANNELS("Channels & categories"), EPG("TV guide (EPG)"), PLAYBACK("Playback"),
+    PLAYLISTS("Playlists"), CHANNELS("Channels & categories"), EPG("TV guide (EPG)"), PLAYBACK("Playback"), ADDONS("On Demand"),
     APPEARANCE("Appearance"), BEHAVIOUR("App behaviour"), BACKUP("Backup & restore"), ABOUT("About"),
 }
 
@@ -171,7 +171,7 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
                 when (group) {
                     SettingsGroup.PLAYLISTS -> PlaylistGroupRows(vm, first, playlistOpeners, onAddPlaylist) { park(); playlist = it }
                     SettingsGroup.EPG -> EpgGroupRows(vm, first, Modifier.focusRequester(sourcesOpener)) { park(); sourcesOpen = true }
-                    SettingsGroup.CHANNELS -> ChannelGroupRows(vm, first, openers) { park(); page = it }
+                    SettingsGroup.CHANNELS -> { ChannelGroupRows(vm, first, openers) { park(); page = it }; HiddenChannelsRows() }
                     SettingsGroup.PLAYBACK -> {
                         SwitchRow("Autoplay while scrolling", "Preview the focused channel after a short pause; when off, press OK to preview",
                             s.autoplayOnScroll, first) { on -> vm.update { it.copy(autoplayOnScroll = on) } }
@@ -204,6 +204,7 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
                             vm.update { it.copy(showPing = on) }
                         }
                     }
+                    SettingsGroup.ADDONS -> tv.luna.player.ui.ondemand.AddonRows(first, s) { change -> vm.update(change) }
                     SettingsGroup.BACKUP -> BackupRows(vm, first)
                     SettingsGroup.ABOUT -> AboutRows(s, first) { on -> vm.update { it.copy(checkUpdatesOnOpen = on) } }
                 }

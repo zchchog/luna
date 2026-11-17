@@ -66,11 +66,21 @@ class MainActivity : ComponentActivity() {
     private val app: AppViewModel by viewModels()
     private val live: LiveViewModel by viewModels()
     private val vod: VodViewModel by viewModels()
+    private val onDemand: tv.luna.player.ui.ondemand.OnDemandViewModel by viewModels()
     private val settingsVm: SettingsViewModel by viewModels()
     private val searchVm: tv.luna.player.ui.search.SearchViewModel by viewModels()
 
+    /** A channel to start, from a reminder (its pop-up or its notification). */
+    private val watchRequest = kotlinx.coroutines.flow.MutableStateFlow<Long?>(null)
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        intent.getLongExtra(tv.luna.player.reminders.Reminders.EXTRA_WATCH, -1L).takeIf { it > 0 }?.let { watchRequest.value = it }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null) intent?.getLongExtra(tv.luna.player.reminders.Reminders.EXTRA_WATCH, -1L)?.takeIf { it > 0 }?.let { watchRequest.value = it }
         CatalogueSyncWorker.runOnLaunch(this)
         // Audio decoder (spec §4.4): the player rebuilds when idle, else from the next stream.
         lifecycleScope.launch {
@@ -114,6 +124,8 @@ class MainActivity : ComponentActivity() {
                 var cover by remember { androidx.compose.runtime.mutableFloatStateOf(0f) } // black cover for changes of screen (drawn further down)
                 BackHandler {
                     when {
+                        // A full-screen player's menu or list is open: Back closes that, never the video.
+                        top is Screen.Player && tv.luna.player.ui.PlayerBack.close?.invoke() == true -> Unit
                         top == Screen.Vod && grid != null -> vod.gridCategory.value = null
                         // Leaving live full screen: go black first, so the screen being rebuilt behind is never seen.
                         top is Screen.Player && top.live -> scope.launch {
@@ -137,7 +149,8 @@ class MainActivity : ComponentActivity() {
                     TopNav(tab, onSelect = selectTab, Modifier.onFocusChanged { menuFocused = it.hasFocus }, menuFocus,
                         showClock = settings.showDateTime,
                         showDate = false, pingMs = pingMs,
-                        tabs = tv.luna.player.ui.visibleTabs(settings.recordingOn))
+                        tabs = tv.luna.player.ui.visibleTabs(settings.recordingOn),
+                        onSwitchMode = { selectTab(Tab.ON_DEMAND) })
                 }
                 val themeId = LocalTheme.current.id
                 // A channel from search: its category becomes the guide's, so zapping and Back behave as from the guide.
@@ -155,20 +168,77 @@ class MainActivity : ComponentActivity() {
                     val screens = @androidx.compose.runtime.Composable {
                     when (top) {
                         Screen.Loading -> Unit
+                        Screen.Activate -> tv.luna.player.ui.ActivateScreen { app.activate(it) }
                         is Screen.Setup -> Box(Modifier.fillMaxSize().background(LocalTheme.current.colors.vodBg)) { ProviderFormScreen(app, top.editId) }
                         is Screen.Settings -> SettingsScreen(settingsVm, onAddPlaylist = app::addPlaylist, onEditPlaylist = app::editPlaylist,
                             onDeletePlaylist = app::deletePlaylist, onUsePlaylist = { live.resetForPlaylistSwitch(); app.usePlaylist(it) }, initialGroup = top.group)
                         Screen.Live, Screen.Vod -> if (top == Screen.Live) LiveGuideScreen(live, nav, full) else VodHomeScreen(vod, nav, onOpen = app::open)
-                        Screen.Search -> tv.luna.player.ui.search.SearchScreen(searchVm, nav, searchChannel, app::open)
+                        Screen.Search -> tv.luna.player.ui.search.SearchScreen(searchVm, nav, searchChannel, app::open, onOpenOnDemand = app::openOnDemand)
                         Screen.Recordings -> tv.luna.player.recording.RecordingsScreen(nav, app::playRecording)
+                        Screen.OnDemand -> tv.luna.player.ui.ondemand.OnDemandHome(onDemand,
+                            Modifier.onFocusChanged { menuFocused = it.hasFocus }, menuFocus,
+                            onSwitch = { selectTab(Tab.LIVE) }, onSettings = { selectTab(Tab.SETTINGS) },
+                            onOpen = app::openOnDemand, onFolder = app::openFolder,
+                            onResume = { p ->
+                                app.openSources(tv.luna.player.ui.ondemand.SourceRequest(p.type, p.metaId, p.videoId, p.imdbId, p.name, p.subtitle, p.poster, p.background, p.positionMs))
+                            },
+                            onAddons = { app.openSettings(tv.luna.player.ui.settings.SettingsGroup.ADDONS) })
+                        is Screen.OdFolder -> tv.luna.player.ui.ondemand.OnDemandFolder(onDemand, top.folder, onOpen = app::openOnDemand)
+                        is Screen.OdDetail -> tv.luna.player.ui.ondemand.OnDemandDetail(onDemand, top.preview, onPlay = app::openSources)
+                        is Screen.OdSources -> tv.luna.player.ui.ondemand.OnDemandSources(onDemand, top.request, settings.autoPlayBestSource, settings.maxQuality) { stream ->
+                            onDemand.play(top.request, stream)
+                            app.playFullScreen(listOfNotNull(top.request.name, top.request.subtitle).joinToString(" · "), live = false)
+                        }
                         is Screen.Detail -> VodDetailScreen(vod, top.item, onPlay = { url, title ->
                             vod.play(url, top.item)
                             app.playFullScreen(title, live = false)
                         }, onOpen = app::open)
-                        is Screen.Player -> PlayerScreen(app.player, top.title, live.takeIf { top.live }, onGuide = { app.back() })
+                        is Screen.Player -> {
+                            // On Demand episodes: the player offers the next one (found once playback has started).
+                            val fromOnDemand = stack.getOrNull(stack.size - 2) is Screen.OdSources
+                            val upNext by onDemand.upNext.collectAsState()
+                            val next = upNext.takeIf { fromOnDemand }
+                            PlayerScreen(app.player, top.title, live.takeIf { top.live }, onGuide = { app.back() },
+                                nextLabel = next?.subtitle?.removePrefix("Up next · "), nextAtSeconds = settings.nextEpisodeSeconds,
+                                autoNext = settings.autoNextEpisode,
+                                onNext = {
+                                    val req = onDemand.nextRequest()
+                                    onDemand.markWatched()
+                                    app.back() // leaves the player: this episode counts as watched
+                                    if (req != null) { app.back(); app.openSources(req) } // swap this episode's sources for the next one's
+                                })
+                        }
                     }
+                    }
+                    // Flipping between Live TV and On Demand: a quick dip to the background colour and back, over the new screen.
+                    // (Moving the screens themselves stuttered: the live preview is a video surface that can't move with them.)
+                    val onDemandSide = top == Screen.OnDemand || top is Screen.OdDetail || top is Screen.OdFolder || top is Screen.OdSources
+                    var dip by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+                    var lastSide by remember { mutableStateOf(onDemandSide) }
+                    // Raised in the same frame the screen changes (read only while drawing), so the new screen never flashes first.
+                    androidx.compose.runtime.SideEffect {
+                        if (onDemandSide != lastSide) {
+                            if (top == Screen.OnDemand || top == Screen.Live || top == Screen.Vod) dip = 1f
+                            lastSide = onDemandSide
+                        }
+                    }
+                    LaunchedEffect(onDemandSide) {
+                        if (dip > 0f) {
+                            delay(90) // the new screen draws its first frame under the cover
+                            androidx.compose.animation.core.animate(1f, 0f, animationSpec = androidx.compose.animation.core.tween(320,
+                                easing = androidx.compose.animation.core.LinearOutSlowInEasing)) { v, _ -> dip = v }
+                        }
                     }
                     screens()
+                    val dipColour = LocalTheme.current.colors.vodBg
+                    Box(Modifier.fillMaxSize().graphicsLayer { alpha = dip }.background(dipColour))
+                    // The Luna logo, faint, in the top-right corner of the main screens (not over full-screen video or Settings,
+                    // which has its own).
+                    if (top == Screen.Live || top == Screen.Vod || top == Screen.Search || top == Screen.Recordings || top == Screen.OnDemand ||
+                        top is Screen.Detail || top is Screen.OdDetail || top is Screen.OdFolder || top is Screen.OdSources) {
+                        tv.luna.player.ui.LunaWordmark(16.sp, 4.sp, Modifier.align(Alignment.TopEnd).padding(top = 22.dp, end = 26.dp)
+                            .graphicsLayer { alpha = .45f })
+                    }
                     // Going into or out of full-screen playback: the picture moves between the corner preview and the whole
                     // screen, which would show as a glitch. Cover that moment in black and fade it away.
                     val playerOpen = top is Screen.Player
@@ -191,7 +261,18 @@ class MainActivity : ComponentActivity() {
                     }
                     Box(Modifier.fillMaxSize().graphicsLayer { alpha = cover }.background(Color.Black))
                     // Connection questions and recording notices, over every screen.
-                    tv.luna.player.recording.PromptHost((application as IptvApp).container.recordings) {
+                    // A reminder's "Watch now": open Live TV on that channel, full screen.
+                    val watchId by watchRequest.collectAsState()
+                    LaunchedEffect(watchId, top) {
+                        val id = watchId ?: return@LaunchedEffect
+                        if (top == Screen.Loading || top == Screen.Activate) return@LaunchedEffect
+                        watchRequest.value = null
+                        val ch = (application as IptvApp).container.db.channelDao().get(id) ?: return@LaunchedEffect
+                        selectTab(Tab.LIVE)
+                        live.startOn(ch)
+                        app.playFullScreen(ch.displayName(live.strip.value), live = true)
+                    }
+                    tv.luna.player.recording.PromptHost((application as IptvApp).container.recordings, onWatch = { watchRequest.value = it }) {
                         if ((app.stack.value.last() as? Screen.Player)?.live == true) app.back()
                     }
                     tv.luna.player.data.update.UpdatePrompt((application as IptvApp).container.updater, (application as IptvApp).container.background)
@@ -216,12 +297,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        tv.luna.player.reminders.AppVisible.value = false
         // Don't keep streaming (or holding the provider's connection) after the user leaves the app.
         app.player.toBackground()
     }
 
     override fun onStart() {
         super.onStart()
+        tv.luna.player.reminders.AppVisible.value = true
         app.player.toForeground()
         // "Check for updates when Luna opens" (on unless turned off in Settings > About): look every time the app comes
         // to the front, and show the pop-up even if "Not now" was pressed last time.

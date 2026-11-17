@@ -28,6 +28,8 @@ class GuideState internal constructor(
     var refocusOnChange by mutableStateOf(false)
     var previewing by mutableStateOf(previewing)
     var railOpen by mutableStateOf(false)
+    /** The highlight is on the channel's name (Left from the programme) rather than on a programme. */
+    var onChannel by mutableStateOf(false)
     internal var menu by mutableStateOf<GuideMenu?>(null)
     internal var railMove by mutableStateOf<RailMove?>(null)
     internal var restored = false

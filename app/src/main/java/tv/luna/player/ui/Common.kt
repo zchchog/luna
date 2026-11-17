@@ -12,6 +12,7 @@ import kotlinx.coroutines.delay
 import tv.luna.player.R
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -46,12 +47,13 @@ fun keepOrFirst(current: tv.luna.player.data.db.CategoryEntity?, list: List<tv.l
     list.firstOrNull { it.id == current?.id } ?: list.firstOrNull { it.id == preferId } ?: list.firstOrNull()
 
 enum class Tab(val label: String, @androidx.annotation.DrawableRes val icon: Int) {
-    SEARCH("Search", R.drawable.ic_tab_search), LIVE("Live", R.drawable.ic_tab_live), MOVIES("Movies", R.drawable.ic_tab_movies),
-    SERIES("Series", R.drawable.ic_tab_series), RECORDINGS("Recordings", R.drawable.ic_tab_recordings), SETTINGS("Settings", R.drawable.ic_tab_settings),
+    SEARCH("Search", R.drawable.ic_tab_search), LIVE("TV guide", R.drawable.ic_tab_live), MOVIES("Movies", R.drawable.ic_tab_movies),
+    SERIES("Series", R.drawable.ic_tab_series), ON_DEMAND("On Demand", R.drawable.ic_tab_ondemand), RECORDINGS("Recordings", R.drawable.ic_tab_recordings), SETTINGS("Settings", R.drawable.ic_tab_settings),
 }
 
 /** The main menu's entries: Recordings only while recording is switched on. */
-fun visibleTabs(recordingOn: Boolean): List<Tab> = Tab.entries.filter { it != Tab.RECORDINGS || recordingOn }
+// On Demand is reached with the Live TV / On Demand switch, not a tab.
+fun visibleTabs(recordingOn: Boolean): List<Tab> = Tab.entries.filter { (it != Tab.RECORDINGS || recordingOn) && it != Tab.ON_DEMAND }
 
 /** A D-pad focusable, OK-clickable box that tells its content whether it has focus. */
 @Composable
@@ -72,30 +74,44 @@ fun FocusBox(
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun TopNav(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier, selectedFocus: FocusRequester? = null, showClock: Boolean = true,
-           showDate: Boolean = false, pingMs: Int? = null, tabs: List<Tab> = visibleTabs(false)) {
+           showDate: Boolean = false, pingMs: Int? = null, tabs: List<Tab> = visibleTabs(false), onSwitchMode: (() -> Unit)? = null) {
+    val focusFor = { t: Tab -> if (t == selected && selectedFocus != null) Modifier.focusRequester(selectedFocus) else Modifier }
+    // Live TV's sections sit in the same panel as the Live TV / On Demand switch; Search and Settings are round buttons after it.
+    val sections = tabs.filter { it != Tab.SEARCH && it != Tab.SETTINGS }
+    val sectionRow = @Composable {
+        Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
+            sections.forEach { t ->
+                FocusBox(onClick = { onSelect(t) }, modifier = focusFor(t)) { f ->
+                    Text(t.label, fontSize = 12.sp, fontWeight = FontWeight.Medium,
+                        color = when { f -> Color(0xFF06323A); t == selected -> Color.White; else -> Color(0xB3EFFBFC) },
+                        modifier = Modifier.clip(RoundedCornerShape(13.dp))
+                            .background(when { f -> Color(0xFFEFFBFC); t == selected -> Color(0x385FD6DC); else -> Color.Transparent })
+                            .padding(horizontal = 12.dp, vertical = 5.dp))
+                }
+            }
+        }
+    }
     // Entering the menu from below lands on the current tab, not the nearest one.
     Row(
-        modifier.focusProperties { enter = { selectedFocus ?: FocusRequester.Default } }.focusGroup()
-            ,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier.focusProperties { enter = { selectedFocus ?: FocusRequester.Default } }.focusGroup(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        tabs.forEach { t ->
-            FocusBox(onClick = { onSelect(t) }, modifier = if (t == selected && selectedFocus != null) Modifier.focusRequester(selectedFocus) else Modifier) { f ->
-                val fg = when { f -> Color.Black; t == selected -> Color.White; else -> LocalTheme.current.colors.muted }
-                Row(
-                    Modifier.clip(RoundedCornerShape(15.dp))
-                        .background(when { f -> Color.White; t == selected -> Color(0x1FFFFFFF); else -> Color.Transparent })
-                        .padding(horizontal = 13.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+        if (onSwitchMode != null) tv.luna.player.ui.ondemand.ModeSwitch(false, extra = sectionRow, onSwitch = onSwitchMode) else sectionRow()
+        listOf(Tab.SEARCH, Tab.SETTINGS).filter { it in tabs }.forEach { t ->
+            FocusBox(onClick = { onSelect(t) }, modifier = focusFor(t)) { f ->
+                Box(
+                    Modifier.size(30.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(when { f -> Color(0xFFEFFBFC); t == selected -> Color(0x385FD6DC); else -> Color(0xA606323A) })
+                        .border(1.dp, if (f) Color.Transparent else Color(0x525FD6DC), androidx.compose.foundation.shape.CircleShape),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(painterResource(t.icon), contentDescription = null, tint = fg, modifier = Modifier.size(14.dp))
-                    Text("  " + t.label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = fg)
+                    Icon(painterResource(t.icon), contentDescription = t.label, tint = if (f) Color(0xFF06323A) else Color.White, modifier = Modifier.size(14.dp))
                 }
             }
         }
         if (showClock) NavClock(showDate)
-        pingMs?.let { Text(pingLabel(it), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = LocalTheme.current.colors.muted, modifier = Modifier.padding(start = 14.dp)) }
+        pingMs?.let { Text(pingLabel(it), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = LocalTheme.current.colors.muted, modifier = Modifier.padding(start = 6.dp)) }
     }
 }
 

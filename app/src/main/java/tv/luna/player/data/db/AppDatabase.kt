@@ -34,6 +34,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun customGroupDao(): CustomGroupDao
     abstract fun recentDao(): RecentDao
     abstract fun recordingDao(): tv.luna.player.recording.RecordingDao
+    abstract fun reminderDao(): tv.luna.player.reminders.ReminderDao
 
     companion object {
         fun create(context: Context): AppDatabase =

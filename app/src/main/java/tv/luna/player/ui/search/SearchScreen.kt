@@ -85,10 +85,13 @@ fun SearchScreen(
     textColor: Color = Color.White,
     /** False where the field is reached by moving onto it (Xcube's blade card): the keyboard waits for OK there. */
     openKeyboard: Boolean = true,
+    /** Opens an On Demand film or series from the results. */
+    onOpenOnDemand: (tv.luna.player.data.addons.MetaPreview) -> Unit = {},
 ) {
     val colors = LocalTheme.current.colors
     val query by vm.query.collectAsState()
     val results by vm.results.collectAsState()
+    val onDemand by vm.onDemand.collectAsState()
     val logos by vm.logoSource.collectAsState()
     val strip by vm.strip.collectAsState()
     val field = remember { FocusRequester() }
@@ -121,7 +124,7 @@ fun SearchScreen(
         ) {
             Icon(painterResource(R.drawable.ic_tab_search), null, tint = Color.White, modifier = Modifier.size(20.dp))
             Box(Modifier.padding(start = 12.dp).weight(1f)) {
-                if (query.isEmpty()) Text("Search channels, films and series", fontSize = 18.sp, color = LocalTheme.current.colors.muted)
+                if (query.isEmpty()) Text("Search channels, films and series (Live TV and On Demand)", fontSize = 18.sp, color = LocalTheme.current.colors.muted)
                 BasicTextField(
                     query, { vm.query.value = it }, singleLine = true, readOnly = !editing,
                     textStyle = androidx.tv.material3.LocalTextStyle.current.merge(TextStyle(color = Color.White, fontSize = 18.sp)), cursorBrush = SolidColor(Color.White),
@@ -165,6 +168,16 @@ fun SearchScreen(
             }
             ResultRow("Movies", r.movies, 1, returnTo, back, firstResult.takeIf { firstSection == 1 }) { i, item, m -> Poster(item, m, caption = true, onFocused = {}) { vm.returnTo = 1 to i; onOpen(item) } }
             ResultRow("Series", r.series, 2, returnTo, back, firstResult.takeIf { firstSection == 2 }) { i, item, m -> Poster(item, m, caption = true, onFocused = {}) { vm.returnTo = 2 to i; onOpen(item) } }
+            // On Demand matches for the same words, under the TV ones.
+            onDemand.forEach { (label, found) ->
+                Text("On Demand · $label  ${found.size}", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(found.size) { i ->
+                        val m = found[i]
+                        tv.luna.player.ui.ondemand.OdPoster(m, if (i == 0 && firstSection < 0) Modifier.focusRequester(firstResult) else Modifier, onFocused = {}) { onOpenOnDemand(m) }
+                    }
+                }
+            }
         }
     }
 }

@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import androidx.compose.ui.draw.drawWithContent
 import kotlinx.coroutines.delay
 import tv.luna.player.data.db.CategoryEntity
 import tv.luna.player.data.model.Kind
@@ -95,7 +96,7 @@ fun VodHomeScreen(vm: VodViewModel, nav: @Composable () -> Unit, onOpen: (VodIte
     Box(Modifier.fillMaxSize().guideBackground()) {
         Backdrop(focused?.let { details[it.id]?.backdrop ?: it.poster })
         Box(Modifier.padding(start = 50.dp, top = 22.dp)) { nav() }
-        Row(Modifier.align(Alignment.TopEnd).padding(top = 25.dp, end = 50.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.align(Alignment.TopEnd).padding(top = 25.dp, end = 120.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Category", fontSize = 11.sp, color = LocalTheme.current.colors.muted)
             Text("◀ ${gridCat?.name ?: if (kind == Kind.MOVIE) "All Movies" else "All Series"}", fontSize = 11.sp, color = Color.White,
                 fontWeight = FontWeight.Medium, modifier = Modifier.padding(start = 4.dp).clip(RoundedCornerShape(10.dp))
@@ -198,10 +199,16 @@ fun Poster(item: VodItem?, modifier: Modifier = Modifier, caption: Boolean = fal
 @Composable
 fun Backdrop(url: String?) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopEnd) {
-        Box(Modifier.size(700.dp, 410.dp)) {
+        // Like the live preview: the picture itself fades out at the left and bottom, so the teal background shows through
+        // (fading to one flat colour left a visible box against the gradient).
+        Box(Modifier.size(700.dp, 410.dp)
+            .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                drawRect(Brush.horizontalGradient(0f to Color.Transparent, .45f to Color.Black), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+                drawRect(Brush.verticalGradient(.55f to Color.Black, 1f to Color.Transparent), blendMode = androidx.compose.ui.graphics.BlendMode.DstIn)
+            }) {
             if (url != null) AsyncImage(url, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(0f to LocalTheme.current.colors.vodBg, .22f to LocalTheme.current.colors.vodBg.copy(alpha = .85f), .6f to LocalTheme.current.colors.vodBg.copy(alpha = .2f), 1f to Color.Transparent)))
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(.45f to Color.Transparent, .75f to LocalTheme.current.colors.vodBg.copy(alpha = .6f), 1f to LocalTheme.current.colors.vodBg)))
         }
     }
 }

@@ -14,3 +14,5 @@ private/
 
 # Claude Code personal settings
 .claude/settings.local.json
+build-log.txt
+test-run/

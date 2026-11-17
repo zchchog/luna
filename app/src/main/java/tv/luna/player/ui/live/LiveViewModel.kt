@@ -393,6 +393,41 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
 
     fun stopRecording(id: Long) = c.recordings.stop(id)
 
+    // --- Where recordings go (asked the first time) ---
+
+    /** "this box", "the USB drive"… for the channel menu. */
+    val recordPlace: StateFlow<String> = c.settings.settings.map { s ->
+        when (s.recordTo) {
+            tv.luna.player.recording.RecStorage.INTERNAL -> "this box"
+            tv.luna.player.recording.RecStorage.USB -> "the USB drive"
+            tv.luna.player.recording.RecStorage.SMB -> "the network share"
+        }
+    }.distinctUntilChanged().stateIn(viewModelScope, SharingStarted.Eagerly, "this box")
+
+    /** USB drives plugged in now, with their names. */
+    fun usbDrives(): List<Pair<String, String>> = tv.luna.player.recording.usbDirs(getApplication()).map { dir ->
+        val name = runCatching {
+            getApplication<android.app.Application>().getSystemService(android.os.storage.StorageManager::class.java)
+                .getStorageVolume(dir)?.getDescription(getApplication())
+        }.getOrNull() ?: "USB drive"
+        name to dir.path
+    }
+
+    /** Whether a network share has been set up in Settings. */
+    suspend fun shareSetUp() = c.settings.settings.first().smbServer.isNotBlank()
+
+    /** Turns recording on, saving to [to] ([usbPath]: which USB drive). */
+    suspend fun setRecordPlace(to: tv.luna.player.recording.RecStorage, usbPath: String? = null) {
+        c.settings.update { it.copy(recordingOn = true, recordTo = to, recordUsbPath = usbPath ?: it.recordUsbPath) }
+    }
+
+    // --- Reminders (channel menu) ---
+
+    /** (channelId, programme start) with a reminder set. */
+    val reminderMarks: StateFlow<Set<Pair<Long, Long>>> = c.reminders.marks.stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+    fun remind(ch: ChannelEntity, p: GuideProgramme) { viewModelScope.launch { c.reminders.add(ch, p) } }
+    fun cancelReminder(ch: ChannelEntity, p: GuideProgramme) { viewModelScope.launch { c.reminders.cancel(ch, p) } }
+
     fun hide(ch: ChannelEntity) { viewModelScope.launch { c.db.channelDao().setHidden(ch.id, true) } }
 
     fun hideCategory(cat: CategoryEntity) { viewModelScope.launch { c.db.categoryDao().setHidden(cat.id, true) } }

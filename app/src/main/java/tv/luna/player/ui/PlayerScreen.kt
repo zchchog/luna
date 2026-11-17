@@ -49,7 +49,8 @@ private val PLAY_PAUSE = setOf(Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause
 
 /** Full-screen playback. Live ([liveVm] set) adds the info overlay (OK opens, Back closes, 5s auto-hide) and Up/Down zapping. */
 @Composable
-fun PlayerScreen(player: PlayerManager, title: String, liveVm: LiveViewModel? = null, onGuide: () -> Unit = {}) {
+fun PlayerScreen(player: PlayerManager, title: String, liveVm: LiveViewModel? = null, onGuide: () -> Unit = {},
+                 nextLabel: String? = null, nextAtSeconds: Int = 45, autoNext: Boolean = true, onNext: () -> Unit = {}) {
     val live = liveVm != null
     val focused = liveVm?.focused?.collectAsState()?.value
     val name = focused?.displayName(liveVm.strip.collectAsState().value) ?: title
@@ -64,6 +65,11 @@ fun PlayerScreen(player: PlayerManager, title: String, liveVm: LiveViewModel? = 
     val keys = remember { FocusRequester() }
     val paused by player.paused.collectAsState()
     BackHandler(enabled = overlay) { overlay = false }
+    // Belt and braces: the activity's own Back asks here first, so with the menu open Back only ever closes the menu.
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        PlayerBack.close = { if (overlay) { overlay = false; true } else false }
+        onDispose { PlayerBack.close = null }
+    }
     LaunchedEffect(overlay, lastKey, popupOpen) {
         // The menu goes away on its own after a few quiet seconds (longer while a list is open).
         if (overlay) { delay(if (popupOpen) 12_000 else 5_000); overlay = false }
@@ -87,10 +93,10 @@ fun PlayerScreen(player: PlayerManager, title: String, liveVm: LiveViewModel? = 
     ) {
         AndroidView(
             factory = { ctx -> PlayerView(ctx).also {
-                it.useController = !live
-                if (!live) { insetControls(it); it.setShowSubtitleButton(true); keepFocusWhenControlsHide(it) } // shown beside the cog only when the file has subtitles
+                // Luna draws its own controls (VodControls for films, episodes and recordings; LiveOverlay for live).
+                it.useController = false
                 player.attach(it)
-                if (live) it.isFocusable = false else it.requestFocus()
+                it.isFocusable = false
             } },
             onRelease = { player.detach(it) },
             modifier = Modifier.fillMaxSize(),
@@ -114,11 +120,15 @@ fun PlayerScreen(player: PlayerManager, title: String, liveVm: LiveViewModel? = 
             if (paused && !overlay) Text("❚❚  Paused", color = Color.White, fontSize = 14.sp,
                 modifier = Modifier.align(Alignment.TopCenter).padding(top = 28.dp).background(Color(0x99000000), RoundedCornerShape(16.dp)).padding(horizontal = 16.dp, vertical = 6.dp))
         }
+        if (liveVm == null) VodControls(player, title, nextLabel, nextAtSeconds, autoNext, onNext)
         error?.let {
             Text(it, color = Color.White, modifier = Modifier.align(Alignment.Center).background(Color(0xCC000000)).padding(24.dp))
         }
     }
 }
+
+/** The full-screen player's "Back closes my menu first" hook, asked by the activity before it leaves the player. */
+object PlayerBack { var close: (() -> Boolean)? = null }
 
 /** Moves the controller's bottom bar (cog, time) and time bar into the TV-safe area; the dark backdrop stays full-screen. */
 private fun insetControls(view: PlayerView) {

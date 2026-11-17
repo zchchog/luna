@@ -77,6 +77,12 @@ class AppContainer(context: Context) {
     val logos: LogoRepository by lazy { LogoRepository(db, http, logoDir) }
     val logoPack: LogoPackRepository by lazy { LogoPackRepository(db, logoDir) }
     val settings: SettingsRepository by lazy { SettingsRepository(prefs) }
+    /** First-run registration code. */
+    val activation: tv.luna.player.data.security.Activation by lazy { tv.luna.player.data.security.Activation(prefs) }
+    /** TV guide reminders (pop-up or notification a minute before). */
+    val reminders: tv.luna.player.reminders.Reminders by lazy { tv.luna.player.reminders.Reminders(appContext, db, recordings.prompt) }
+    /** On Demand add-ons (kept in their own encrypted store, outside settings backups). */
+    val addons: tv.luna.player.data.addons.AddonRepository by lazy { tv.luna.player.data.addons.AddonRepository(appContext, http, background) }
     val epgImporter: EpgImporter by lazy { EpgImporter(db, http, XmltvParser()) }
     val epgMatcher: EpgMatcher by lazy { EpgMatcher(db, settings = { settings.settings.first() }) }
     val epgShare: EpgShareSources by lazy {

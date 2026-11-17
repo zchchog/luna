@@ -76,6 +76,15 @@ data class AppSettings(
     val smbUser: String = "",
     /** Stored encrypted (Secrets); never backed up. */
     val smbPassword: String = "",
+    // New fields go last, so positional uses of the constructor keep working.
+    /** On Demand: start the top source at once instead of showing the list. */
+    val autoPlayBestSource: Boolean = false,
+    /** On Demand: how many seconds before an episode ends the "Next episode" button shows (0 = never). */
+    val nextEpisodeSeconds: Int = 45,
+    /** On Demand: when an episode ends, start the next one by itself. */
+    val autoNextEpisode: Boolean = true,
+    /** On Demand: the best quality to go for: "Best" (highest available), "1080p" or "720p" (for slower internet). */
+    val maxQuality: String = "Best",
 ) {
     fun clamped() = copy(
         epgUpdateIntervalHours = epgUpdateIntervalHours.takeIf { it in EPG_INTERVALS } ?: 12,

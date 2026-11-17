@@ -152,6 +152,8 @@ abstract class ChannelDao {
     )
     abstract fun observeFavourites(providerId: Long): Flow<List<ChannelEntity>>
     @Query("UPDATE channel SET hidden = :hidden WHERE id = :id") abstract suspend fun setHidden(id: Long, hidden: Boolean)
+    /** Channels hidden from the guide (hold OK on a channel › Hide), for Settings to show again. */
+    @Query("SELECT * FROM channel WHERE providerId = :providerId AND hidden = 1 ORDER BY name") abstract fun hiddenChannels(providerId: Long): kotlinx.coroutines.flow.Flow<List<ChannelEntity>>
     @Query("UPDATE channel SET customName = :name WHERE id = :id") abstract suspend fun setCustomName(id: Long, name: String?)
 
     @Query("DELETE FROM channel WHERE id IN (:ids)")
