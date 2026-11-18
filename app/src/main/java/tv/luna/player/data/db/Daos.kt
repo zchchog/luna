@@ -174,6 +174,9 @@ abstract class MovieDao {
     @Update(entity = MovieEntity::class) abstract suspend fun updateFromProvider(list: List<MovieFromProvider>)
     @Query("SELECT * FROM movie WHERE providerId = :providerId")
     abstract suspend fun byProvider(providerId: Long): List<MovieEntity>
+    /** The newest films' covers, for the poster wall in Live TV's corner. */
+    @Query("SELECT poster FROM movie WHERE providerId = :providerId AND poster IS NOT NULL AND poster != '' ORDER BY addedAt DESC, id DESC LIMIT :limit")
+    abstract suspend fun newestPosters(providerId: Long, limit: Int): List<String>
     @Query("SELECT * FROM movie WHERE categoryId = :categoryId ORDER BY name")
     abstract fun observeByCategory(categoryId: Long): Flow<List<MovieEntity>>
     @Query("SELECT * FROM movie WHERE categoryId = :categoryId ORDER BY name LIMIT :limit")
@@ -207,6 +210,9 @@ abstract class SeriesDao {
     @Update(entity = SeriesEntity::class) abstract suspend fun updateFromProvider(list: List<SeriesFromProvider>)
     @Query("SELECT * FROM series WHERE providerId = :providerId")
     abstract suspend fun byProvider(providerId: Long): List<SeriesEntity>
+    /** Some series covers (latest added first), for the poster wall in Live TV's corner. */
+    @Query("SELECT poster FROM series WHERE providerId = :providerId AND poster IS NOT NULL AND poster != '' ORDER BY id DESC LIMIT :limit")
+    abstract suspend fun newestPosters(providerId: Long, limit: Int): List<String>
     @Query("SELECT * FROM series WHERE categoryId = :categoryId ORDER BY name")
     abstract fun observeByCategory(categoryId: Long): Flow<List<SeriesEntity>>
     @Query("SELECT * FROM series WHERE categoryId = :categoryId ORDER BY name LIMIT :limit")

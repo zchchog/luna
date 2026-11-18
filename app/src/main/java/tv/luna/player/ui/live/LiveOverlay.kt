@@ -113,6 +113,7 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
     var popup by remember { mutableStateOf<Popup?>(null) }
     var lastPopup by remember { mutableStateOf<Popup?>(null) }
     var showStrip by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     val pauseFocus = remember { FocusRequester() }
     val guideFocus = remember { FocusRequester() }
     val buttonFocus = remember { Popup.entries.associateWith { FocusRequester() } }
@@ -122,6 +123,8 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
         // Closing a popup puts the highlight back on the button that opened it.
         if (popup == null) lastPopup?.let { withFrameNanos { }; runCatching { buttonFocus.getValue(it).requestFocus() } }
     }
+    // The settings row slides in under the buttons and takes the highlight.
+    LaunchedEffect(showSettings) { if (showSettings) { withFrameNanos { }; withFrameNanos { }; runCatching { buttonFocus.getValue(Popup.AUDIO).requestFocus() } } }
     LaunchedEffect(showStrip) { if (showStrip) { withFrameNanos { }; withFrameNanos { }; runCatching { guideFocus.requestFocus() } } }
     BackHandler(enabled = popup != null) { popup = null }
     fun open(p: Popup) { lastPopup = p; popup = p }
@@ -176,13 +179,13 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
                 }
                 Text(clockTime(cur.stop), fontSize = 12.sp, color = Color(0xCCEFFBFC))
             }
+            // First glance: play/pause and record. Down shows the stream's settings; Down again, the TV guide and recent channels.
             Row(
                 Modifier.padding(start = 48.dp, end = 48.dp, top = 14.dp)
-                    // Down opens the TV guide and recent channels underneath, then moves into them.
                     .onPreviewKeyEvent { e ->
-                        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown && !showStrip) { showStrip = true; true } else false
+                        if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown && !showSettings) { showSettings = true; true } else false
                     },
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 RoundControl(Modifier.focusRequester(pauseFocus), player::togglePause) { c -> PlayPauseIcon(paused, c) }
@@ -194,21 +197,33 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
                         else -> open(Popup.RECORD_WHERE)
                     }
                 }) { c -> RecordIcon(recording = recordingId != null, c) }
-                Spacer(Modifier.width(6.dp))
-                ControlButton("Audio", tracks.audio.firstOrNull { it.selected }?.label ?: "Default", { open(Popup.AUDIO) },
-                    Modifier.focusRequester(buttonFocus.getValue(Popup.AUDIO)))
-                ControlButton("Subtitles", if (tracks.textOff) "Off" else tracks.text.firstOrNull { it.selected }?.label ?: "On", { open(Popup.SUBTITLES) },
-                    Modifier.focusRequester(buttonFocus.getValue(Popup.SUBTITLES)))
-                ControlButton("Quality", if (tracks.autoQuality) "Auto" else tracks.video.firstOrNull { it.selected }?.label ?: "Auto", { open(Popup.QUALITY) },
-                    Modifier.focusRequester(buttonFocus.getValue(Popup.QUALITY)))
-                ControlButton("Picture", pictureSize.label, { open(Popup.PICTURE) }, Modifier.focusRequester(buttonFocus.getValue(Popup.PICTURE)))
-                ControlButton("Audio delay", delayText(delayMs), { open(Popup.DELAY) }, Modifier.focusRequester(buttonFocus.getValue(Popup.DELAY)))
-                ControlButton("Versions", if (versions.isEmpty()) "None found" else "${versions.size} found", { open(Popup.VERSIONS) },
-                    Modifier.focusRequester(buttonFocus.getValue(Popup.VERSIONS)))
             }
-            AnimatedVisibility(!showStrip, enter = fadeIn(), exit = fadeOut()) {
-                Text("▼  TV guide and recent channels", fontSize = 12.sp, color = LocalTheme.current.colors.muted,
-                    modifier = Modifier.padding(start = 48.dp, top = 10.dp))
+            AnimatedVisibility(!showSettings, enter = fadeIn(), exit = fadeOut()) {
+                MoreHint("Stream settings")
+            }
+            AnimatedVisibility(showSettings, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+                Row(
+                    Modifier.padding(start = 48.dp, end = 48.dp, top = 14.dp)
+                        // Down from the settings opens the TV guide and recent channels underneath, then moves into them.
+                        .onPreviewKeyEvent { e ->
+                            if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown && !showStrip) { showStrip = true; true } else false
+                        },
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    ControlButton("Audio", tracks.audio.firstOrNull { it.selected }?.label ?: "Default", { open(Popup.AUDIO) },
+                        Modifier.focusRequester(buttonFocus.getValue(Popup.AUDIO)))
+                    ControlButton("Subtitles", if (tracks.textOff) "Off" else tracks.text.firstOrNull { it.selected }?.label ?: "On", { open(Popup.SUBTITLES) },
+                        Modifier.focusRequester(buttonFocus.getValue(Popup.SUBTITLES)))
+                    ControlButton("Quality", if (tracks.autoQuality) "Auto" else tracks.video.firstOrNull { it.selected }?.label ?: "Auto", { open(Popup.QUALITY) },
+                        Modifier.focusRequester(buttonFocus.getValue(Popup.QUALITY)))
+                    ControlButton("Picture", pictureSize.label, { open(Popup.PICTURE) }, Modifier.focusRequester(buttonFocus.getValue(Popup.PICTURE)))
+                    ControlButton("Audio delay", delayText(delayMs), { open(Popup.DELAY) }, Modifier.focusRequester(buttonFocus.getValue(Popup.DELAY)))
+                    ControlButton("Versions", if (versions.isEmpty()) "None found" else "${versions.size} found", { open(Popup.VERSIONS) },
+                        Modifier.focusRequester(buttonFocus.getValue(Popup.VERSIONS)))
+                }
+            }
+            AnimatedVisibility(showSettings && !showStrip, enter = fadeIn(), exit = fadeOut()) {
+                MoreHint("TV guide and recent channels")
             }
             AnimatedVisibility(showStrip, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
                 LazyRow(
@@ -300,6 +315,19 @@ private fun ControlButton(
                 if (value != null) Text(value, fontSize = 11.sp, color = fg.copy(alpha = .75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
+    }
+}
+
+/** "⌄ Stream settings": a small arrow and what Down will show. */
+@Composable
+private fun MoreHint(label: String) {
+    Row(Modifier.padding(start = 48.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Canvas(Modifier.size(12.dp, 8.dp)) {
+            val sw = 2.dp.toPx()
+            drawLine(Color(0xFF5FD6DC), Offset(sw, sw), Offset(size.width / 2, size.height - sw), sw, androidx.compose.ui.graphics.StrokeCap.Round)
+            drawLine(Color(0xFF5FD6DC), Offset(size.width - sw, sw), Offset(size.width / 2, size.height - sw), sw, androidx.compose.ui.graphics.StrokeCap.Round)
+        }
+        Text("  $label", fontSize = 12.sp, color = LocalTheme.current.colors.muted)
     }
 }
 

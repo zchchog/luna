@@ -76,7 +76,7 @@ data class GridStyle(
 
 /** Luna: mockup 01, 420px per half hour (1dp = 2px on a 1080p TV). */
 // 5.9dp/min: 195 + 5 + 120 × 5.9 = 908dp fits between the 24dp margins (the TV's overscan cut off a grid that ran to the edge).
-val GLASS_GRID = GridStyle(36.dp, 195.dp, 5.9.dp, 120, 4.dp, FontWeight.Medium, focusedProgramme = Color(0x8C76A3A6), roundedCells = true, textScale = 1.14f) // frosted glass
+val GLASS_GRID = GridStyle(32.dp, 255.dp, 5.4.dp, 120, 4.dp, FontWeight.Medium, focusedProgramme = Color(0x8C76A3A6), roundedCells = true, textScale = 1.14f) // frosted glass
 
 private val PILL = RoundedCornerShape(5.dp)
 private val BOX = RoundedCornerShape(2.dp)
@@ -103,7 +103,11 @@ fun GuideGrid(
     val reminderMarks by vm.reminderMarks.collectAsState()
     val recordingOnChannel by vm.recordingOnChannel.collectAsState()
     Column(modifier) {
-        Row(Modifier.height((25 * style.textScale).dp), // no rule under the times: it read as a harsh line
+        Row(Modifier.height((25 * style.textScale).dp).drawBehind {
+                // A faint line under the times, fading out at both ends, like the one beside the categories.
+                drawRect(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to Color.Transparent, .12f to Color(0x33EFFBFC), .88f to Color(0x33EFFBFC), 1f to Color.Transparent),
+                    Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx()))
+            },
             verticalAlignment = Alignment.Bottom) {
             Text(if (windowStart - now > 12 * 3600_000) "Later" else "Today", fontSize = (13 * style.textScale).sp, fontWeight = FontWeight.SemiBold,
                 color = style.headerColor ?: Color.White, modifier = Modifier.width(style.channelCol).padding(bottom = 5.dp))

@@ -59,6 +59,8 @@ fun LiveGuideScreen(vm: LiveViewModel, nav: @Composable () -> Unit, onFullScreen
     }) {
         Preview(vm, visible = state.previewing, screen = screen, edge = PreviewEdge.FADE,
             modifier = Modifier.align(Alignment.TopEnd).size(470.dp, 264.dp))
+        // Nothing previewing: a drifting wall of film and series covers in the corner instead of an empty space.
+        if (!state.previewing) PosterWall(Modifier.align(Alignment.TopEnd).size(470.dp, 264.dp))
         Box(Modifier.padding(start = 24.dp, top = 22.dp)) { nav() }
         // Categories open: everything under the top menu moves right to make room for them (moved, not re-laid out,
         // so it stays smooth on slow boxes).

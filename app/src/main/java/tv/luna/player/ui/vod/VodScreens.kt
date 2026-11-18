@@ -186,14 +186,29 @@ fun Poster(item: VodItem?, modifier: Modifier = Modifier, caption: Boolean = fal
                 .size(110.dp, 165.dp).clip(RoundedCornerShape(6.dp)).background(LocalTheme.current.colors.vodCard),
             contentAlignment = Alignment.BottomStart,
         ) {
-            if (item != null) {
-                Text(item.name, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 3, modifier = Modifier.padding(7.dp))
-                if (item.poster != null) AsyncImage(item.poster, item.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-            }
+            // Under the poster: a Luna teal card with the title, so a missing or broken cover still looks like it belongs.
+            PosterFallback(item?.name)
+            if (item?.poster != null) AsyncImage(item.poster, item.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
         if (caption && item != null) Text(item.name, fontSize = 12.sp, lineHeight = 15.sp, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(start = 3.dp, top = 6.dp))
     } }
+}
+
+/** The card behind every cover: teal gradient, two faint moons, and the title near the bottom. */
+@Composable
+fun PosterFallback(title: String?) {
+    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF1C9AA0), Color(0xFF0D6F7A), Color(0xFF06323A)))),
+        contentAlignment = Alignment.BottomStart) {
+        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+            val r = size.minDimension
+            drawCircle(Color(0x17EFFBFC), radius = r * .8f, center = androidx.compose.ui.geometry.Offset(size.width * .9f, size.height * .12f))
+            drawCircle(Color(0x10EFFBFC), radius = r * .48f, center = androidx.compose.ui.geometry.Offset(size.width * .72f, size.height * .3f))
+            drawRect(Brush.verticalGradient(0f to Color(0x1FFFFFFF), .45f to Color.Transparent), size = androidx.compose.ui.geometry.Size(size.width, size.height * .45f))
+        }
+        if (title != null) Text(title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, fontFamily = tv.luna.player.ui.Montserrat, color = Color.White,
+            maxLines = 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(8.dp))
+    }
 }
 
 @Composable
@@ -350,6 +365,7 @@ fun VodDetailScreen(vm: VodViewModel, item: VodItem, onPlay: (url: String, title
                                         .border(2.dp, if (f) Color.White else Color.Transparent, RoundedCornerShape(8.dp)).padding(3.dp)
                                         .size(210.dp, 118.dp).clip(RoundedCornerShape(6.dp)).background(LocalTheme.current.colors.vodCard),
                                 ) {
+                                    PosterFallback(null)
                                     (ep.thumb ?: d?.backdrop)?.let { AsyncImage(it, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
                                     Chip("E${ep.number}", Modifier.align(Alignment.BottomStart))
                                     ep.durationSecs?.takeIf { it > 0 }?.let { Chip(duration(it * 1000L), Modifier.align(Alignment.BottomEnd)) }
