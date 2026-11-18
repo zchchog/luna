@@ -69,6 +69,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.withStyle
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -433,5 +434,80 @@ fun Field(
                 .border(2.dp, if (focused) Color.White else Color.Gray, RoundedCornerShape(8.dp))
                 .padding(12.dp),
         )
+    }
+}
+
+private val LockIcon = strokeIcon("M6 11h12v9H6z", "M8.5 11V8a3.5 3.5 0 0 1 7 0v3")
+
+/**
+ * First ever start: Luna is invite only, so it asks for a registration code before anything else. Same look as the
+ * welcome screen. The box only opens the keyboard when OK is pressed on it, never by itself.
+ * [check] says whether a code is accepted (and remembers it if so).
+ */
+@Composable
+fun ActivateScreen(check: suspend (String) -> Boolean) {
+    var code by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var wrong by remember { mutableStateOf(0) }
+    var waitUntil by remember { mutableStateOf(0L) }
+    val first = remember { FocusRequester() }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    FocusOnShow(first)
+
+    fun submit() {
+        if (busy) return
+        if (code.isBlank()) { message = "Type your code first."; return }
+        val now = System.currentTimeMillis()
+        if (now < waitUntil) { message = "Too many tries. Wait ${(waitUntil - now) / 1000 + 1} seconds."; return }
+        busy = true; message = null
+        scope.launch {
+            val ok = check(code)
+            busy = false
+            if (!ok) {
+                wrong++
+                // A pause after a few wrong codes, so codes can't be guessed by trying lots.
+                if (wrong % 5 == 0) waitUntil = System.currentTimeMillis() + 30_000
+                message = "That code isn't right. Check it and try again."
+            }
+        }
+    }
+
+    BrandBackground(glowX = .26f, glowY = 1.25f, glowR = .45f) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 72.dp), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween) {
+            Column(Modifier.width(390.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                LunaWordmark(72.sp, 12.sp)
+                Row(Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0x295FD6DC)).padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Icon(LockIcon, BrandGlow, 14.dp)
+                    Text("INVITE ONLY", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, color = BrandGlow)
+                }
+                Text("Welcome to Luna", fontFamily = Montserrat, fontWeight = FontWeight.SemiBold, fontSize = 26.sp, lineHeight = 32.sp, color = Color.White)
+                Text("Luna is invite only. Enter the registration code you were given to get started. You only need to do this once.",
+                    fontSize = 15.sp, lineHeight = 22.sp, color = Soft)
+                Row(Modifier.padding(top = 8.dp).panel().padding(horizontal = 15.dp, vertical = 13.dp),
+                    horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                    Icon(ChatIcon, BrandGlow, 20.dp)
+                    Text(
+                        androidx.compose.ui.text.buildAnnotatedString {
+                            append("No code yet? To get an invite, message ")
+                            withStyle(androidx.compose.ui.text.SpanStyle(color = Color.White, fontWeight = FontWeight.SemiBold)) { append("@novadrop:matrix.org") }
+                            append(" on the ")
+                            withStyle(androidx.compose.ui.text.SpanStyle(color = Color.White, fontWeight = FontWeight.SemiBold)) { append("Element X") }
+                            append(" app.")
+                        },
+                        fontSize = 12.sp, lineHeight = 18.sp, color = Color(0xE6EFFBFC),
+                    )
+                }
+            }
+            Column(Modifier.width(380.dp).panel().padding(horizontal = 26.dp, vertical = 26.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                Text("Registration code", fontFamily = Montserrat, fontWeight = FontWeight.SemiBold, fontSize = 18.sp, color = Color.White)
+                LunaField("Your code", code, placeholder = "e.g. NOVA-LUNA-1234", problem = message != null && !busy,
+                    modifier = Modifier.focusRequester(first)) { code = it; message = null }
+                message?.let { Text(it, fontSize = 13.sp, color = Color(0xFFFFB4A8)) }
+                PillButton(if (busy) "Checking…" else "Continue", width = 328.dp) { submit() }
+            }
+        }
     }
 }

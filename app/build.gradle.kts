@@ -17,8 +17,8 @@ android {
         applicationId = "tv.luna.player"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
-        versionName = "0.9.1"
+        versionCode = 15
+        versionName = "0.9.2"
     }
 
     // Release key, kept outside the repo: ~/.config/iptv-tv/keystore.properties (storeFile, storePassword, keyAlias,
