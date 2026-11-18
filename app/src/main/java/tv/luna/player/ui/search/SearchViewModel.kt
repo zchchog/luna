@@ -50,13 +50,6 @@ class SearchViewModel(app: Application) : AndroidViewModel(app) {
         c.search.universal(p, strip, q)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    /** On Demand films and series for the same search (only once On Demand is unlocked). */
-    @OptIn(FlowPreview::class)
-    val onDemand: StateFlow<List<Pair<String, List<tv.luna.player.data.addons.MetaPreview>>>> = query
-        .debounce(450).map { it.trim() }.distinctUntilChanged()
-        .mapLatest { q -> if (q.length < 2 || !c.addons.unlocked()) emptyList() else runCatching { c.addons.search(q) }.getOrDefault(emptyList()) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
-
     val logoSource: StateFlow<List<LogoKind>> = c.settings.settings.map { it.logoOrder }.distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings().logoOrder)
 

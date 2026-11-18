@@ -48,12 +48,11 @@ fun keepOrFirst(current: tv.luna.player.data.db.CategoryEntity?, list: List<tv.l
 
 enum class Tab(val label: String, @androidx.annotation.DrawableRes val icon: Int) {
     SEARCH("Search", R.drawable.ic_tab_search), LIVE("TV guide", R.drawable.ic_tab_live), MOVIES("Movies", R.drawable.ic_tab_movies),
-    SERIES("Series", R.drawable.ic_tab_series), ON_DEMAND("On Demand", R.drawable.ic_tab_ondemand), RECORDINGS("Recordings", R.drawable.ic_tab_recordings), SETTINGS("Settings", R.drawable.ic_tab_settings),
+    SERIES("Series", R.drawable.ic_tab_series), RECORDINGS("Recordings", R.drawable.ic_tab_recordings), SETTINGS("Settings", R.drawable.ic_tab_settings),
 }
 
 /** The main menu's entries: Recordings only while recording is switched on. */
-// On Demand is reached with the Live TV / On Demand switch, not a tab.
-fun visibleTabs(recordingOn: Boolean): List<Tab> = Tab.entries.filter { (it != Tab.RECORDINGS || recordingOn) && it != Tab.ON_DEMAND }
+fun visibleTabs(recordingOn: Boolean): List<Tab> = Tab.entries.filter { it != Tab.RECORDINGS || recordingOn }
 
 /** A D-pad focusable, OK-clickable box that tells its content whether it has focus. */
 @Composable
@@ -74,9 +73,9 @@ fun FocusBox(
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun TopNav(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier, selectedFocus: FocusRequester? = null, showClock: Boolean = true,
-           showDate: Boolean = false, pingMs: Int? = null, tabs: List<Tab> = visibleTabs(false), onSwitchMode: (() -> Unit)? = null) {
+           showDate: Boolean = false, pingMs: Int? = null, tabs: List<Tab> = visibleTabs(false)) {
     val focusFor = { t: Tab -> if (t == selected && selectedFocus != null) Modifier.focusRequester(selectedFocus) else Modifier }
-    // Live TV's sections sit in the same panel as the Live TV / On Demand switch; Search and Settings are round buttons after it.
+    // Search and Settings are round buttons after the sections.
     val sections = tabs.filter { it != Tab.SEARCH && it != Tab.SETTINGS }
     val sectionRow = @Composable {
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -97,7 +96,10 @@ fun TopNav(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (onSwitchMode != null) tv.luna.player.ui.ondemand.ModeSwitch(false, extra = sectionRow, onSwitch = onSwitchMode) else sectionRow()
+        // The sections sit together in one glass panel.
+        Box(Modifier.clip(RoundedCornerShape(17.dp)).background(Color(0xA606323A)).border(1.dp, Color(0x525FD6DC), RoundedCornerShape(17.dp)).padding(3.dp)) {
+            sectionRow()
+        }
         listOf(Tab.SEARCH, Tab.SETTINGS).filter { it in tabs }.forEach { t ->
             FocusBox(onClick = { onSelect(t) }, modifier = focusFor(t)) { f ->
                 Box(

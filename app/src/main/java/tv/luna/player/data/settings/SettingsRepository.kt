@@ -20,10 +20,6 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
     private val decoder = stringPreferencesKey("audio_decoder")
     private val confirmExit = booleanPreferencesKey("confirm_exit")
     private val checkUpdatesOnOpen = booleanPreferencesKey("check_updates_on_open")
-    private val autoPlayBest = booleanPreferencesKey("auto_play_best_source")
-    private val nextEpisodeSeconds = intPreferencesKey("next_episode_seconds")
-    private val autoNextEpisode = booleanPreferencesKey("auto_next_episode")
-    private val maxQuality = stringPreferencesKey("max_quality")
     private val startOnBoot = booleanPreferencesKey("start_on_boot")
     private val interval = intPreferencesKey("epg_update_interval_hours")
     private val epgOnStart = booleanPreferencesKey("epg_update_on_start")
@@ -71,10 +67,6 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
             audioDecoder = this[decoder]?.let { n -> AudioDecoder.entries.find { it.name == n } } ?: d.audioDecoder,
             confirmExit = this[confirmExit] ?: d.confirmExit,
             checkUpdatesOnOpen = this[checkUpdatesOnOpen] ?: d.checkUpdatesOnOpen,
-            autoPlayBestSource = this[autoPlayBest] ?: d.autoPlayBestSource,
-            nextEpisodeSeconds = this[nextEpisodeSeconds] ?: d.nextEpisodeSeconds,
-            autoNextEpisode = this[autoNextEpisode] ?: d.autoNextEpisode,
-            maxQuality = this[maxQuality] ?: d.maxQuality,
             startOnBoot = this[startOnBoot] ?: d.startOnBoot,
             epgUpdateIntervalHours = this[interval] ?: d.epgUpdateIntervalHours,
             epgUpdateOnStart = this[epgOnStart] ?: d.epgUpdateOnStart,
@@ -113,10 +105,6 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
         this[decoder] = s.audioDecoder.name
         this[confirmExit] = s.confirmExit
         this[checkUpdatesOnOpen] = s.checkUpdatesOnOpen
-        this[autoPlayBest] = s.autoPlayBestSource
-        this[nextEpisodeSeconds] = s.nextEpisodeSeconds
-        this[autoNextEpisode] = s.autoNextEpisode
-        this[maxQuality] = s.maxQuality
         this[startOnBoot] = s.startOnBoot
         this[interval] = s.epgUpdateIntervalHours
         this[epgOnStart] = s.epgUpdateOnStart

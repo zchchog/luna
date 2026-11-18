@@ -30,7 +30,7 @@ class SettingsRepositoryTest {
 
     @Test fun updateRoundTripsEveryField() = runTest {
         val s = AppSettings(ThemeId.LUNA, true, AudioDecoder.HARDWARE, false, true, 24, true, false, 14, 0, 42L, true)
-            .copy(subtitlesOn = true, subtitleLanguage = "fr", autoPlayBestSource = true, nextEpisodeSeconds = 20, autoNextEpisode = false)
+            .copy(subtitlesOn = true, subtitleLanguage = "fr")
         repo.update { s }
         assertEquals(s, repo.settings.first())
     }

@@ -38,11 +38,6 @@ sealed interface Screen {
     /** [recordingId]: a recording is playing; its position is saved on Back. */
     data class Player(val title: String, val live: Boolean, val recordingId: Long? = null) : Screen
     data object Recordings : Screen
-    /** On Demand (add-ons): home, one title, and its sources. */
-    data object OnDemand : Screen
-    data class OdDetail(val preview: tv.luna.player.data.addons.MetaPreview) : Screen
-    data class OdSources(val request: tv.luna.player.ui.ondemand.SourceRequest) : Screen
-    data class OdFolder(val folder: tv.luna.player.data.addons.CFolder) : Screen
 }
 
 enum class RootBack { FOCUS_MENU, SHOW_HINT, EXIT }
@@ -52,7 +47,7 @@ enum class RootBack { FOCUS_MENU, SHOW_HINT, EXIT }
  * With [confirmExit] off, Back at a root exits at once.
  */
 fun rootBack(top: Screen, menuFocused: Boolean, hintShowing: Boolean, confirmExit: Boolean) = when {
-    !confirmExit || (top != Screen.Live && top != Screen.Vod && top != Screen.Search && top != Screen.Recordings && top != Screen.OnDemand) -> RootBack.EXIT
+    !confirmExit || (top != Screen.Live && top != Screen.Vod && top != Screen.Search && top != Screen.Recordings) -> RootBack.EXIT
     !menuFocused -> RootBack.FOCUS_MENU
     !hintShowing -> RootBack.SHOW_HINT
     else -> RootBack.EXIT
@@ -108,7 +103,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (t == Tab.SETTINGS) { push(Screen.Settings()); return }
         if (t != Tab.LIVE) player.stop() // the live preview shouldn't keep playing behind Movies/Series
         tab.value = t
-        stack.value = listOf(when (t) { Tab.LIVE -> Screen.Live; Tab.SEARCH -> Screen.Search; Tab.RECORDINGS -> Screen.Recordings; Tab.ON_DEMAND -> Screen.OnDemand; else -> Screen.Vod })
+        stack.value = listOf(when (t) { Tab.LIVE -> Screen.Live; Tab.SEARCH -> Screen.Search; Tab.RECORDINGS -> Screen.Recordings; else -> Screen.Vod })
     }
 
     fun addPlaylist() { form.value = FormState(); push(Screen.Setup()) }
@@ -118,12 +113,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun provider(id: Long): ProviderEntity? = c.db.providerDao().get(id)
 
     fun open(item: VodItem) = push(Screen.Detail(item))
-
-    fun openOnDemand(p: tv.luna.player.data.addons.MetaPreview) = push(Screen.OdDetail(p))
-
-    fun openSources(r: tv.luna.player.ui.ondemand.SourceRequest) = push(Screen.OdSources(r))
-
-    fun openFolder(f: tv.luna.player.data.addons.CFolder) = push(Screen.OdFolder(f))
 
     /** Gamestation: an XMB Settings item opens Settings on that group. */
     fun openSettings(group: tv.luna.player.ui.settings.SettingsGroup) = push(Screen.Settings(group))
@@ -147,8 +136,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val at = p.currentPosition.takeIf { p.duration <= 0 || it < p.duration - 30_000 } ?: 0 // watched to the end: start over next time
             viewModelScope.launch { c.recordings.setPosition(top.recordingId, at) }
         }
-        // On Demand: remember where it got to, for Continue watching.
-        if (top is Screen.Player && !top.live && top.recordingId == null) c.addons.leftPlayer(player.player.currentPosition, player.player.duration)
         if (top is Screen.Player && !top.live) player.stop()
         stack.value = stack.value.dropLast(1)
         // A channel played from search: there is no preview to return to.

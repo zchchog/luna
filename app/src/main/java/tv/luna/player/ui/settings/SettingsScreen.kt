@@ -48,7 +48,7 @@ import tv.luna.player.ui.AppLogo
 import tv.luna.player.ui.FocusBox
 
 enum class SettingsGroup(val title: String) {
-    PLAYLISTS("Playlists"), CHANNELS("Channels & categories"), EPG("TV guide (EPG)"), PLAYBACK("Playback"), ADDONS("On Demand"),
+    PLAYLISTS("Playlists"), CHANNELS("Channels & categories"), EPG("TV guide (EPG)"), PLAYBACK("Playback"),
     APPEARANCE("Appearance"), BEHAVIOUR("App behaviour"), BACKUP("Backup & restore"), ABOUT("About"),
 }
 
@@ -204,7 +204,6 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
                             vm.update { it.copy(showPing = on) }
                         }
                     }
-                    SettingsGroup.ADDONS -> tv.luna.player.ui.ondemand.AddonRows(first, s) { change -> vm.update(change) }
                     SettingsGroup.BACKUP -> BackupRows(vm, first)
                     SettingsGroup.ABOUT -> AboutRows(s, first) { on -> vm.update { it.copy(checkUpdatesOnOpen = on) } }
                 }
