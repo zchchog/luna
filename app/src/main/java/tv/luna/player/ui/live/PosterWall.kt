@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,7 +36,7 @@ import kotlinx.coroutines.flow.first
 import tv.luna.player.IptvApp
 
 /**
- * Live TV's corner when nothing is previewing: a tilted, slowly drifting wall of film and series covers from the
+ * Live TV's corner when nothing is previewing: a tilted wall of film and series covers from the
  * playlist, fading into the background like the live picture does.
  */
 @Composable
@@ -49,25 +50,46 @@ fun PosterWall(modifier: Modifier) {
         value = (films.zip(shows).flatMap { listOf(it.first, it.second) } + films.drop(shows.size) + shows.drop(films.size)).distinct().take(21)
     }
     if (posters.size < 6) return
-    val drift by rememberInfiniteTransition(label = "wall").animateFloat(0f, 1f,
-        infiniteRepeatable(tween(40_000, easing = LinearEasing), RepeatMode.Reverse), label = "drift")
+    // Structured motion: tilted columns gliding in a steady loop, alternate columns going up and down
+    // (no wandering back and forth). Each column holds PER posters drawn twice, so the loop is seamless.
+    val cols = 6
+    val per = 6
+    val step = 160.dp // poster height + gap
+    val columns = List(cols) { c ->
+        val mine = posters.filterIndexed { i, _ -> i % cols == c }.ifEmpty { posters }
+        List(per) { i -> mine[(i + c) % mine.size] }
+    }
+    val t by rememberInfiniteTransition(label = "wall").animateFloat(0f, 1f,
+        infiniteRepeatable(tween(48_000, easing = LinearEasing), RepeatMode.Restart), label = "glide")
     Box(
         modifier.clipToBounds()
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithContent {
                 drawContent()
-                drawRect(Brush.horizontalGradient(0f to Color.Transparent, .45f to Color.Black), blendMode = BlendMode.DstIn)
-                drawRect(Brush.verticalGradient(.55f to Color.Black, 1f to Color.Transparent), blendMode = BlendMode.DstIn)
+                // Gentle, progressive fades: long from the left, and away at the bottom (and a touch at the top).
+                drawRect(Brush.horizontalGradient(0f to Color.Transparent, .18f to Color.Black.copy(alpha = .12f),
+                    .38f to Color.Black.copy(alpha = .55f), .6f to Color.Black), blendMode = BlendMode.DstIn)
+                drawRect(Brush.verticalGradient(0f to Color.Black.copy(alpha = .35f), .12f to Color.Black,
+                    .5f to Color.Black, .78f to Color.Black.copy(alpha = .4f), 1f to Color.Transparent), blendMode = BlendMode.DstIn)
             },
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            Modifier.requiredSize(760.dp, 520.dp).graphicsLayer { rotationZ = -13f; translationX = (drift - .5f) * 80.dp.toPx(); alpha = .9f },
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        // Bigger than the corner and tilted, so posters always reach past every edge (no empty gaps).
+        Row(
+            Modifier.requiredSize(1000.dp, 820.dp).graphicsLayer { rotationZ = -12f; alpha = .9f },
+            horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
         ) {
-            posters.chunked(7).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    row.forEach { url ->
+            columns.forEachIndexed { c, list ->
+                val up = c % 2 == 0
+                Column(
+                    Modifier.wrapContentHeight(Alignment.Top, unbounded = true).graphicsLayer {
+                        val loop = step.toPx() * per
+                        val p = (t + c * .17f) % 1f
+                        translationY = if (up) -p * loop else (p - 1f) * loop
+                    },
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    (list + list).forEach { url ->
                         Box(Modifier.size(100.dp, 150.dp).clip(RoundedCornerShape(8.dp)).background(Color(0x401C9AA0))) {
                             AsyncImage(url, null, contentScale = ContentScale.Crop, modifier = Modifier.size(100.dp, 150.dp))
                         }
