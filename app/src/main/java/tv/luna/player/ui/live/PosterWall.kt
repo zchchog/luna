@@ -86,7 +86,7 @@ fun PosterWall(modifier: Modifier) {
         List(per) { i -> mine[(i + c) % mine.size] }
     }
     val t by rememberInfiniteTransition(label = "wall").animateFloat(0f, 1f,
-        infiniteRepeatable(tween(400_000, easing = LinearEasing), RepeatMode.Restart), label = "glide")
+        infiniteRepeatable(tween(1_200_000, easing = LinearEasing), RepeatMode.Restart), label = "glide")
     Box(
         modifier.clipToBounds()
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }

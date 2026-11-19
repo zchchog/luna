@@ -21,7 +21,7 @@ fun colorsOf(id: ThemeId, colour: ThemeColour = ThemeColour.DEFAULT): ThemeColor
             val (d, m, l) = colour.glass.map { Color(it) }
             base.copy(bg = listOf(d, m, l), cell = lerp(l, Color.White, .08f).copy(alpha = .55f), cellDim = l.copy(alpha = .35f),
                 panel = lerp(d, Color.Black, .25f).copy(alpha = .94f), onFocus = d, vodBg = lerp(d, Color.Black, .1f), vodCard = lerp(d, m, .35f),
-                accent = if (colour == ThemeColour.CHRISTMAS) Color(0xFFF2C46D) else base.accent)
+                accent = if (colour == ThemeColour.CHRISTMAS) Color.White else base.accent)
         }
         else -> base
     }
