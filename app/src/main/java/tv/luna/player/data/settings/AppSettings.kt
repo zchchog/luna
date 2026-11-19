@@ -17,6 +17,7 @@ enum class ThemeColour(val label: String, val glass: List<Long>, val liquid: Lis
     GREEN("Green", listOf(0xFF0A3318, 0xFF1A6E35, 0xFF2F9752), listOf(0xFF2FBF71, 0xFF0F9AB5)),
     RED("Red", listOf(0xFF420A12, 0xFF8C1A2A, 0xFFB43544), listOf(0xFFF0563C, 0xFFB03CF0)),
     GRAPHITE("Graphite", listOf(0xFF12151C, 0xFF29303B, 0xFF444E5E), listOf(0xFF5A6478, 0xFF262B38)),
+    SKY("Sky", listOf(0xFF030B2E, 0xFF0A2C86, 0xFF1F63E0), listOf(0xFF1F7BFF, 0xFF5CB8FF)),
     CHRISTMAS("Christmas", listOf(0xFF3A0710, 0xFF7A1424, 0xFFA82A3A), listOf(0xFFC8384A, 0xFFF2C46D)),
 }
 

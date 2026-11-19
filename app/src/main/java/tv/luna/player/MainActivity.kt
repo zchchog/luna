@@ -95,10 +95,12 @@ class MainActivity : ComponentActivity() {
             val themeId = appSettings.theme
             // Luna's teal look, or the seasonal Christmas one (Settings > Appearance).
             val christmas = appSettings.themeColour == tv.luna.player.data.settings.ThemeColour.CHRISTMAS
+            val sky = appSettings.themeColour == tv.luna.player.data.settings.ThemeColour.SKY
             tv.luna.player.ui.theme.Palette.christmas = christmas
+            tv.luna.player.ui.theme.Palette.sky = sky
             val density = androidx.compose.ui.platform.LocalDensity.current
             val conf = androidx.compose.ui.platform.LocalConfiguration.current
-            CompositionLocalProvider(LocalTheme provides remember(themeId, christmas) { themeOf(themeId, if (christmas) tv.luna.player.data.settings.ThemeColour.CHRISTMAS else tv.luna.player.data.settings.ThemeColour.TEAL) }) {
+            CompositionLocalProvider(LocalTheme provides remember(themeId, christmas, sky) { themeOf(themeId, when { christmas -> tv.luna.player.data.settings.ThemeColour.CHRISTMAS; sky -> tv.luna.player.data.settings.ThemeColour.SKY; else -> tv.luna.player.data.settings.ThemeColour.TEAL }) }) {
             MaterialTheme(colorScheme = darkColorScheme()) {
             // Luna and Liquid Glass: every TV Text in Inter (the website's font). Inside MaterialTheme, which
             // otherwise sets its own sans-serif text style over anything provided outside it.
