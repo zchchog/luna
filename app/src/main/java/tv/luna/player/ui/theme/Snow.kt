@@ -23,8 +23,9 @@ fun Snowfall(modifier: Modifier) {
     val flakes = remember {
         val rnd = Random(25)
         List(70) {
-            Flake(rnd.nextFloat(), rnd.nextFloat(), 1.2f + rnd.nextFloat() * 2.6f, .018f + rnd.nextFloat() * .03f,
-                6f + rnd.nextFloat() * 14f, rnd.nextFloat() * 6.28f, .25f + rnd.nextFloat() * .45f)
+            // Fine, faint and very slow: barely drifting down.
+            Flake(rnd.nextFloat(), rnd.nextFloat(), .6f + rnd.nextFloat() * .9f, .004f + rnd.nextFloat() * .006f,
+                3f + rnd.nextFloat() * 5f, rnd.nextFloat() * 6.28f, .18f + rnd.nextFloat() * .3f)
         }
     }
     var ms by remember { mutableStateOf(0L) }
@@ -36,8 +37,8 @@ fun Snowfall(modifier: Modifier) {
 }
 
 private fun DrawScope.flake(f: Flake, t: Float) {
-    val y = ((f.y + t * f.speed * (f.r / 2.5f)) % 1f) * size.height
-    val x = f.x * size.width + sin(t * .5f + f.phase) * f.sway * density
+    val y = ((f.y + t * f.speed) % 1f) * size.height
+    val x = f.x * size.width + sin(t * .15f + f.phase) * f.sway * density
     val fade = 1f - (y / size.height) * .7f
     drawCircle(Color.White.copy(alpha = f.alpha * fade), radius = f.r * density, center = Offset(x, y))
 }

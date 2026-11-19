@@ -46,11 +46,12 @@ val Montserrat = FontFamily(Font(R.font.montserrat_semibold, FontWeight.SemiBold
 
 val BrandGlow: Color get() = tv.luna.player.ui.theme.Palette.glow
 private val MoonTeal: Color get() = tv.luna.player.ui.theme.Palette.moon
+// Clear glass: plain white with see-through bands (no colour of its own), so the theme colour shows through it.
 private val Shine = Brush.verticalGradient(
-    0f to Color.White, .46f to Color(0xFFE9FBFC), .54f to Color(0xFFA9E3E8), 1f to Color(0xFFE3F8FA),
+    0f to Color.White, .46f to Color.White.copy(alpha = .9f), .54f to Color.White.copy(alpha = .58f), 1f to Color.White.copy(alpha = .82f),
 )
 
-/** "LUNA" in glossy white Montserrat, like the TV banner. */
+/** "LUNA" in clear, glassy white Montserrat, like the TV banner. */
 @Composable
 fun LunaWordmark(size: TextUnit, spacing: TextUnit, modifier: Modifier = Modifier) {
     Text(

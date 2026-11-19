@@ -32,6 +32,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
 import tv.luna.player.IptvApp
 
@@ -41,7 +43,8 @@ import tv.luna.player.IptvApp
  */
 @Composable
 fun PosterWall(modifier: Modifier) {
-    val c = (LocalContext.current.applicationContext as IptvApp).container
+    val ctx = LocalContext.current.applicationContext
+    val c = (ctx as IptvApp).container
     val posters by produceState(emptyList<String>()) {
         val p = c.providerRepository.activeProviderId.first() ?: return@produceState
         // UK favourites of 2026 first (when the playlist has them), topped up with the newest additions.
@@ -52,10 +55,25 @@ fun PosterWall(modifier: Modifier) {
                 POPULAR_SHOWS.getOrNull(i)?.let { t -> runCatching { c.db.seriesDao().posterFor(p, t) }.getOrNull()?.let(::add) }
             }
         }
-        val films = runCatching { c.db.movieDao().newestPosters(p, 14) }.getOrDefault(emptyList())
-        val shows = runCatching { c.db.seriesDao().newestPosters(p, 14) }.getOrDefault(emptyList())
+        val films = runCatching { c.db.movieDao().newestPosters(p, 30) }.getOrDefault(emptyList())
+        val shows = runCatching { c.db.seriesDao().newestPosters(p, 30) }.getOrDefault(emptyList())
         val newest = films.zip(shows).flatMap { listOf(it.first, it.second) } + films.drop(shows.size) + shows.drop(films.size)
-        value = (popular + newest).distinct().take(36)
+        // Only covers whose picture really loads, so the wall never shows empty tiles (dead links are skipped).
+        val candidates = (popular + newest).distinct().take(72)
+        val loader = coil.Coil.imageLoader(ctx)
+        val ok = kotlinx.coroutines.coroutineScope {
+            candidates.map { url ->
+                async {
+                    val r = runCatching {
+                        kotlinx.coroutines.withTimeoutOrNull(8_000) {
+                            loader.execute(coil.request.ImageRequest.Builder(ctx).data(url).size(200, 300).build())
+                        }
+                    }.getOrNull()
+                    url.takeIf { r is coil.request.SuccessResult }
+                }
+            }.awaitAll().filterNotNull()
+        }
+        value = ok.take(36)
     }
     if (posters.size < 6) return
     // Structured motion: tilted columns gliding in a steady loop, alternate columns going up and down
@@ -68,7 +86,7 @@ fun PosterWall(modifier: Modifier) {
         List(per) { i -> mine[(i + c) % mine.size] }
     }
     val t by rememberInfiniteTransition(label = "wall").animateFloat(0f, 1f,
-        infiniteRepeatable(tween(140_000, easing = LinearEasing), RepeatMode.Restart), label = "glide")
+        infiniteRepeatable(tween(400_000, easing = LinearEasing), RepeatMode.Restart), label = "glide")
     Box(
         modifier.clipToBounds()
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }

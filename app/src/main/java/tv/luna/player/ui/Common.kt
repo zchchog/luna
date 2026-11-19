@@ -1,7 +1,5 @@
 package tv.luna.player.ui
 
-import tv.luna.player.ui.theme.snowCap
-import androidx.compose.ui.draw.drawBehind
 import tv.luna.player.ui.theme.LocalTheme
 
 import androidx.compose.ui.focus.focusRequester
@@ -99,7 +97,7 @@ fun TopNav(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // The sections sit together in one glass panel.
-        Box(Modifier.clip(RoundedCornerShape(17.dp)).background(tv.luna.player.ui.theme.Palette.navGlass).drawBehind { if (tv.luna.player.ui.theme.Palette.christmas) snowCap() }.border(1.dp, tv.luna.player.ui.theme.Palette.navBorder, RoundedCornerShape(17.dp)).padding(3.dp)) {
+        Box(Modifier.clip(RoundedCornerShape(17.dp)).background(tv.luna.player.ui.theme.Palette.navGlass).border(1.dp, tv.luna.player.ui.theme.Palette.navBorder, RoundedCornerShape(17.dp)).padding(3.dp)) {
             sectionRow()
         }
         listOf(Tab.SEARCH, Tab.SETTINGS).filter { it in tabs }.forEach { t ->
