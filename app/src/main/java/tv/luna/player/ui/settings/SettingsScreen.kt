@@ -5,6 +5,7 @@ import tv.luna.player.ui.theme.guideBackground
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
@@ -246,13 +247,29 @@ fun SettingRow(
 fun SwitchRow(title: String, explanation: String, checked: Boolean, modifier: Modifier = Modifier, onToggle: (Boolean) -> Unit) =
     SettingRow(title, explanation, null, modifier, toggle = checked) { onToggle(!checked) }
 
-/** Slider switch (TiviMate style): a deep blue fills the track when on; the white knob sits at that end. */
+/**
+ * Slider switch in neutral glass, so it suits every theme: on is a solid white track with a dark knob, off a faint
+ * see-through track with a white knob. On a highlighted (white) row it flips to a dark track.
+ */
 @Composable
 fun Toggle(on: Boolean, focused: Boolean) {
-    val off = if (focused) Color(0xFFB0B0B0) else Color(0x40FFFFFF)
-    Box(Modifier.size(44.dp, 24.dp).clip(RoundedCornerShape(12.dp)).background(if (on) tv.luna.player.ui.theme.Palette.bright else off).padding(3.dp),
+    val ink = tv.luna.player.ui.theme.Palette.ink
+    val track = when {
+        focused && on -> ink
+        focused -> Color(0x33000000)
+        on -> Color.White
+        else -> Color(0x33FFFFFF)
+    }
+    val knob = when {
+        focused && on -> Color.White
+        focused -> Color.White
+        on -> ink
+        else -> Color.White
+    }
+    Box(Modifier.size(44.dp, 24.dp).clip(RoundedCornerShape(12.dp)).background(track)
+        .border(1.dp, if (on || focused) Color.Transparent else Color(0x59FFFFFF), RoundedCornerShape(12.dp)).padding(3.dp),
         contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
-        Box(Modifier.size(18.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White))
+        Box(Modifier.size(18.dp).clip(androidx.compose.foundation.shape.CircleShape).background(knob))
     }
 }
 

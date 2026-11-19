@@ -57,7 +57,7 @@ import tv.luna.player.data.repo.RailItem
 import tv.luna.player.ui.FocusBox
 
 /** How far the guide moves right while the categories are open. */
-val RAIL_WIDTH = 236.dp
+val RAIL_WIDTH = 300.dp // wide enough to read most category names in full
 
 /** Rail move mode (spec §4.3): Up/Down moves, OK drops, Back puts it back. */
 internal class RailMove(val cat: CategoryEntity, val from: Int)
@@ -112,7 +112,7 @@ internal fun Rail(
         if (move != null) Text("Up/Down move · OK drop · Back cancel", fontSize = 11.sp, color = LocalTheme.current.colors.muted,
             modifier = Modifier.padding(start = 24.dp, bottom = 8.dp))
         LazyColumn(
-            state = state, verticalArrangement = Arrangement.spacedBy(8.dp),
+            state = state, verticalArrangement = Arrangement.spacedBy(5.dp),
             // Room under the last category, so it can be scrolled up out of the fade at the bottom.
             // Sideways room too: the highlighted row grows and glows, and the list's fade would otherwise cut it flat.
             contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 24.dp, end = 14.dp, top = 10.dp, bottom = 90.dp),
@@ -131,7 +131,7 @@ internal fun Rail(
                     val colors = LocalTheme.current.colors
                     // The same pills as the guide's channel names: glass cells, a glowing light one where the remote is.
                     Row(
-                        Modifier.fillMaxWidth().height(40.dp)
+                        Modifier.fillMaxWidth().height(32.dp)
                             .graphicsLayer { val sc = if (f) 1.025f else 1f; scaleX = sc; scaleY = sc }
                             .then(if (f) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = tv.luna.player.ui.theme.Palette.glow, spotColor = tv.luna.player.ui.theme.Palette.glow) else Modifier)
                             .background(
@@ -144,7 +144,7 @@ internal fun Rail(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         val fg = if (f || isMoving) colors.onFocus else Color.White
-                        Text((if (isMoving) "↕ " else "") + rc.entry.title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = fg, maxLines = 1,
+                        Text((if (isMoving) "↕ " else "") + rc.entry.title, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = fg, maxLines = 1,
                             overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         Text("  " + rc.count, fontSize = 12.sp, color = fg.copy(alpha = .85f))
                     }

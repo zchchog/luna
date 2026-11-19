@@ -93,9 +93,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             val appSettings = app.settings.collectAsState().value
             val themeId = appSettings.theme
-            // Luna's teal look, or the seasonal Christmas one (Settings > Appearance).
+            // The theme from Settings > Appearance: Luna Blue (default), Teal, or Holiday Red.
             val christmas = appSettings.themeColour == tv.luna.player.data.settings.ThemeColour.CHRISTMAS
-            val sky = appSettings.themeColour == tv.luna.player.data.settings.ThemeColour.SKY
+            // Luna Blue is the default: anything other than Teal or Holiday Red shows blue.
+            val sky = !christmas && appSettings.themeColour != tv.luna.player.data.settings.ThemeColour.TEAL
             tv.luna.player.ui.theme.Palette.christmas = christmas
             tv.luna.player.ui.theme.Palette.sky = sky
             val density = androidx.compose.ui.platform.LocalDensity.current
