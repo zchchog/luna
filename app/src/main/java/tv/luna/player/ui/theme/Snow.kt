@@ -29,7 +29,8 @@ fun Snowfall(modifier: Modifier) {
         }
     }
     var ms by remember { mutableStateOf(0L) }
-    LaunchedEffect(Unit) { val start = withFrameMillis { it }; while (true) withFrameMillis { ms = it - start } }
+    // About 20 updates a second is plenty for snow this slow, and much lighter than every frame.
+    LaunchedEffect(Unit) { val start = withFrameMillis { it }; while (true) { kotlinx.coroutines.delay(50); withFrameMillis { ms = it - start } } }
     Canvas(modifier) {
         val t = ms / 1000f
         flakes.forEach { f -> flake(f, t) }

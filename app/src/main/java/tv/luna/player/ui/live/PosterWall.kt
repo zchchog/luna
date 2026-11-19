@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +36,7 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.withPermit
 import tv.luna.player.IptvApp
 
 /**
@@ -61,14 +63,17 @@ fun PosterWall(modifier: Modifier) {
         // Only covers whose picture really loads, so the wall never shows empty tiles (dead links are skipped).
         val candidates = (popular + newest).distinct().take(72)
         val loader = coil.Coil.imageLoader(ctx)
+        val gate = kotlinx.coroutines.sync.Semaphore(4) // a few at a time, so loading never slows the guide down
         val ok = kotlinx.coroutines.coroutineScope {
             candidates.map { url ->
                 async {
-                    val r = runCatching {
-                        kotlinx.coroutines.withTimeoutOrNull(8_000) {
-                            loader.execute(coil.request.ImageRequest.Builder(ctx).data(url).size(200, 300).build())
-                        }
-                    }.getOrNull()
+                    val r = gate.withPermit {
+                        runCatching {
+                            kotlinx.coroutines.withTimeoutOrNull(8_000) {
+                                loader.execute(coil.request.ImageRequest.Builder(ctx).data(url).size(200, 300).build())
+                            }
+                        }.getOrNull()
+                    }
                     url.takeIf { r is coil.request.SuccessResult }
                 }
             }.awaitAll().filterNotNull()
@@ -85,8 +90,15 @@ fun PosterWall(modifier: Modifier) {
         val mine = posters.filterIndexed { i, _ -> i % cols == c }.ifEmpty { posters }
         List(per) { i -> mine[(i + c) % mine.size] }
     }
-    val t by rememberInfiniteTransition(label = "wall").animateFloat(0f, 1f,
-        infiniteRepeatable(tween(1_200_000, easing = LinearEasing), RepeatMode.Restart), label = "glide")
+    // The wall barely moves, so it only needs a new position 10 times a second (not every frame): far less work for the box.
+    var t by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0f) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        val start = System.nanoTime()
+        while (true) {
+            t = (((System.nanoTime() - start) / 1_000_000L) % 1_200_000L) / 1_200_000f
+            kotlinx.coroutines.delay(100)
+        }
+    }
     Box(
         modifier.clipToBounds()
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }

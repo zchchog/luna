@@ -127,6 +127,10 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
     LaunchedEffect(showSettings) { if (showSettings) { withFrameNanos { }; withFrameNanos { }; runCatching { buttonFocus.getValue(Popup.AUDIO).requestFocus() } } }
     LaunchedEffect(showStrip) { if (showStrip) { withFrameNanos { }; withFrameNanos { }; runCatching { guideFocus.requestFocus() } } }
     BackHandler(enabled = popup != null) { popup = null }
+    // Back steps out one level at a time: channels row -> stream settings -> first glance (then the menu closes).
+    fun upToSettings() { runCatching { buttonFocus.getValue(Popup.AUDIO).requestFocus() }; showStrip = false }
+    fun upToMain() { runCatching { pauseFocus.requestFocus() }; showStrip = false; showSettings = false }
+    BackHandler(enabled = popup == null && (showSettings || showStrip)) { if (showStrip) upToSettings() else upToMain() }
     fun open(p: Popup) { lastPopup = p; popup = p }
 
     Box(Modifier.fillMaxSize()) {
@@ -161,7 +165,8 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
                                 modifier = Modifier.border(1.dp, Color(0xB3FFFFFF), RoundedCornerShape(3.dp)).padding(horizontal = 5.dp, vertical = 1.dp))
                         }
                     }
-                    cur?.desc?.let {
+                    // The description makes way for the channels row when that is open, so everything still fits.
+                    cur?.desc?.takeIf { !showStrip }?.let {
                         Text(it, fontSize = 13.sp, lineHeight = 18.sp, color = Color(0xFFDDE3F0), maxLines = 3, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(top = 6.dp).fillMaxWidth(.75f))
                     }
@@ -202,11 +207,19 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
                 MoreHint("Stream settings")
             }
             AnimatedVisibility(showSettings, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+              Column {
+                SectionLabel("Stream settings")
                 Row(
-                    Modifier.padding(start = 48.dp, end = 48.dp, top = 14.dp)
+                    Modifier.padding(start = 48.dp, end = 48.dp, top = 6.dp)
                         // Down from the settings opens the TV guide and recent channels underneath, then moves into them.
+                        // Up goes back to play/pause and record.
                         .onPreviewKeyEvent { e ->
-                            if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown && !showStrip) { showStrip = true; true } else false
+                            if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                            when (e.key) {
+                                Key.DirectionDown -> { if (!showStrip) showStrip = true else runCatching { guideFocus.requestFocus() }; true }
+                                Key.DirectionUp -> { upToMain(); true }
+                                else -> false
+                            }
                         },
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
@@ -221,20 +234,29 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
                     ControlButton("Versions", if (versions.isEmpty()) "None found" else "${versions.size} found", { open(Popup.VERSIONS) },
                         Modifier.focusRequester(buttonFocus.getValue(Popup.VERSIONS)))
                 }
+              }
             }
             AnimatedVisibility(showSettings && !showStrip, enter = fadeIn(), exit = fadeOut()) {
                 MoreHint("TV guide and recent channels")
             }
             AnimatedVisibility(showStrip, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+              Column {
+                SectionLabel(if (recents.isEmpty()) "TV guide" else "TV guide and recent channels")
                 LazyRow(
-                    Modifier.padding(top = 14.dp).height(78.dp),
+                    Modifier.padding(top = 6.dp).height(78.dp)
+                        // Up goes back to the stream settings.
+                        .onPreviewKeyEvent { e ->
+                            if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionUp) { upToSettings(); true } else false
+                        },
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 48.dp),
                 ) {
                     item(key = "guide") {
                         OverlayCard(onClick = onGuide, modifier = Modifier.focusRequester(guideFocus)) { f ->
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("TV guide", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = if (f) LocalTheme.current.colors.onFocus else Color.White)
+                            val fg = if (f) LocalTheme.current.colors.onFocus else Color.White
+                            Column(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalArrangement = Arrangement.Center) {
+                                Text("Open TV guide", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = fg)
+                                Text("All channels and what's on", fontSize = 11.sp, color = fg.copy(alpha = .75f), maxLines = 1)
                             }
                         }
                     }
@@ -243,6 +265,7 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
                         OverlayCard(onClick = { onPick(r) }) { f -> RecentCard(r, r.displayName(strip), rp, f, logoSource) }
                     }
                 }
+              }
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -316,6 +339,13 @@ private fun ControlButton(
             }
         }
     }
+}
+
+/** A small heading over a row of the menu, so it's clear what the row is. */
+@Composable
+private fun SectionLabel(label: String) {
+    Text(label.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp,
+        color = LocalTheme.current.colors.muted, modifier = Modifier.padding(start = 48.dp, top = 14.dp))
 }
 
 /** "⌄ Stream settings": a small arrow and what Down will show. */
