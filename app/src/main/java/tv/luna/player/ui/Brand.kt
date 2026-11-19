@@ -44,8 +44,8 @@ import tv.luna.player.ui.theme.LocalTheme
 /** Luna's brand pieces: the Montserrat name, the glossy "LUNA" wordmark, the teal moon-glow background, the opening screen. */
 val Montserrat = FontFamily(Font(R.font.montserrat_semibold, FontWeight.SemiBold))
 
-val BrandGlow = Color(0xFFB5F1F4)
-private val MoonTeal = Color(0xFF8FE3E6)
+val BrandGlow: Color get() = tv.luna.player.ui.theme.Palette.glow
+private val MoonTeal: Color get() = tv.luna.player.ui.theme.Palette.moon
 private val Shine = Brush.verticalGradient(
     0f to Color.White, .46f to Color(0xFFE9FBFC), .54f to Color(0xFFA9E3E8), 1f to Color(0xFFE3F8FA),
 )

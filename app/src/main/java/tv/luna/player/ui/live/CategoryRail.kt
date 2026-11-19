@@ -106,7 +106,7 @@ internal fun Rail(
             },
     ) {
         Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 14.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("CATEGORIES", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF5FD6DC), letterSpacing = 2.sp,
+            Text("CATEGORIES", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = tv.luna.player.ui.theme.Palette.accent, letterSpacing = 2.sp,
                 modifier = Modifier.weight(1f))
         }
         if (move != null) Text("Up/Down move · OK drop · Back cancel", fontSize = 11.sp, color = LocalTheme.current.colors.muted,
@@ -133,7 +133,7 @@ internal fun Rail(
                     Row(
                         Modifier.fillMaxWidth().height(40.dp)
                             .graphicsLayer { val sc = if (f) 1.025f else 1f; scaleX = sc; scaleY = sc }
-                            .then(if (f) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = Color(0xFFB5F1F4), spotColor = Color(0xFFB5F1F4)) else Modifier)
+                            .then(if (f) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = tv.luna.player.ui.theme.Palette.glow, spotColor = tv.luna.player.ui.theme.Palette.glow) else Modifier)
                             .background(
                                 if (isMoving) Color(0xFFE5A00D) else if (f) colors.focus else colors.cell,
                                 RoundedCornerShape(5.dp),

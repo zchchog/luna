@@ -8,5 +8,8 @@ import tv.luna.player.data.settings.ThemeId
 
 @Composable
 fun AppearanceRows(s: AppSettings, first: Modifier, onTheme: (ThemeId) -> Unit, onColour: (ThemeColour) -> Unit) {
-    ChoiceRow("Theme colour", "Background colour of the app", ThemeColour.entries, s.themeColour, { it.label }, first, onPick = onColour)
+    // Luna's own teal, or the seasonal Christmas look (red and gold, with gentle snow).
+    val picked = if (s.themeColour == ThemeColour.CHRISTMAS) ThemeColour.CHRISTMAS else ThemeColour.TEAL
+    ChoiceRow("Theme", "Luna's teal, or a festive red with snow", listOf(ThemeColour.TEAL, ThemeColour.CHRISTMAS), picked,
+        { if (it == ThemeColour.CHRISTMAS) "Christmas" else "Luna" }, first, onPick = onColour)
 }

@@ -1,5 +1,7 @@
 package tv.luna.player.ui
 
+import tv.luna.player.ui.theme.snowCap
+import androidx.compose.ui.draw.drawBehind
 import tv.luna.player.ui.theme.LocalTheme
 
 import androidx.compose.ui.focus.focusRequester
@@ -82,9 +84,9 @@ fun TopNav(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
             sections.forEach { t ->
                 FocusBox(onClick = { onSelect(t) }, modifier = focusFor(t)) { f ->
                     Text(t.label, fontSize = 12.sp, fontWeight = FontWeight.Medium,
-                        color = when { f -> Color(0xFF06323A); t == selected -> Color.White; else -> Color(0xB3EFFBFC) },
+                        color = when { f -> tv.luna.player.ui.theme.Palette.ink; t == selected -> Color.White; else -> Color(0xB3EFFBFC) },
                         modifier = Modifier.clip(RoundedCornerShape(13.dp))
-                            .background(when { f -> Color(0xFFEFFBFC); t == selected -> Color(0x385FD6DC); else -> Color.Transparent })
+                            .background(when { f -> Color(0xFFEFFBFC); t == selected -> tv.luna.player.ui.theme.Palette.selected; else -> Color.Transparent })
                             .padding(horizontal = 12.dp, vertical = 5.dp))
                 }
             }
@@ -97,18 +99,18 @@ fun TopNav(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // The sections sit together in one glass panel.
-        Box(Modifier.clip(RoundedCornerShape(17.dp)).background(Color(0xA606323A)).border(1.dp, Color(0x525FD6DC), RoundedCornerShape(17.dp)).padding(3.dp)) {
+        Box(Modifier.clip(RoundedCornerShape(17.dp)).background(tv.luna.player.ui.theme.Palette.navGlass).drawBehind { if (tv.luna.player.ui.theme.Palette.christmas) snowCap() }.border(1.dp, tv.luna.player.ui.theme.Palette.navBorder, RoundedCornerShape(17.dp)).padding(3.dp)) {
             sectionRow()
         }
         listOf(Tab.SEARCH, Tab.SETTINGS).filter { it in tabs }.forEach { t ->
             FocusBox(onClick = { onSelect(t) }, modifier = focusFor(t)) { f ->
                 Box(
                     Modifier.size(30.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(when { f -> Color(0xFFEFFBFC); t == selected -> Color(0x385FD6DC); else -> Color(0xA606323A) })
-                        .border(1.dp, if (f) Color.Transparent else Color(0x525FD6DC), androidx.compose.foundation.shape.CircleShape),
+                        .background(when { f -> Color(0xFFEFFBFC); t == selected -> tv.luna.player.ui.theme.Palette.selected; else -> tv.luna.player.ui.theme.Palette.navGlass })
+                        .border(1.dp, if (f) Color.Transparent else tv.luna.player.ui.theme.Palette.navBorder, androidx.compose.foundation.shape.CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(painterResource(t.icon), contentDescription = t.label, tint = if (f) Color(0xFF06323A) else Color.White, modifier = Modifier.size(14.dp))
+                    Icon(painterResource(t.icon), contentDescription = t.label, tint = if (f) tv.luna.player.ui.theme.Palette.ink else Color.White, modifier = Modifier.size(14.dp))
                 }
             }
         }

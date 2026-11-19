@@ -44,10 +44,18 @@ fun PosterWall(modifier: Modifier) {
     val c = (LocalContext.current.applicationContext as IptvApp).container
     val posters by produceState(emptyList<String>()) {
         val p = c.providerRepository.activeProviderId.first() ?: return@produceState
+        // UK favourites of 2026 first (when the playlist has them), topped up with the newest additions.
+        val popular = buildList {
+            val n = maxOf(POPULAR_FILMS.size, POPULAR_SHOWS.size)
+            for (i in 0 until n) {
+                POPULAR_FILMS.getOrNull(i)?.let { t -> runCatching { c.db.movieDao().posterFor(p, t) }.getOrNull()?.let(::add) }
+                POPULAR_SHOWS.getOrNull(i)?.let { t -> runCatching { c.db.seriesDao().posterFor(p, t) }.getOrNull()?.let(::add) }
+            }
+        }
         val films = runCatching { c.db.movieDao().newestPosters(p, 14) }.getOrDefault(emptyList())
         val shows = runCatching { c.db.seriesDao().newestPosters(p, 14) }.getOrDefault(emptyList())
-        // Films and series mixed, a few of each per row.
-        value = (films.zip(shows).flatMap { listOf(it.first, it.second) } + films.drop(shows.size) + shows.drop(films.size)).distinct().take(21)
+        val newest = films.zip(shows).flatMap { listOf(it.first, it.second) } + films.drop(shows.size) + shows.drop(films.size)
+        value = (popular + newest).distinct().take(36)
     }
     if (posters.size < 6) return
     // Structured motion: tilted columns gliding in a steady loop, alternate columns going up and down
@@ -60,7 +68,7 @@ fun PosterWall(modifier: Modifier) {
         List(per) { i -> mine[(i + c) % mine.size] }
     }
     val t by rememberInfiniteTransition(label = "wall").animateFloat(0f, 1f,
-        infiniteRepeatable(tween(48_000, easing = LinearEasing), RepeatMode.Restart), label = "glide")
+        infiniteRepeatable(tween(140_000, easing = LinearEasing), RepeatMode.Restart), label = "glide")
     Box(
         modifier.clipToBounds()
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
@@ -99,3 +107,17 @@ fun PosterWall(modifier: Modifier) {
         }
     }
 }
+
+/** The UK's most popular films of 2026 (box office). */
+private val POPULAR_FILMS = listOf(
+    "Spider-Man: Brand New Day", "The Odyssey", "Michael", "Toy Story 5", "Super Mario Galaxy", "Project Hail Mary",
+    "Hamnet", "Wuthering Heights", "Avatar: Fire and Ash", "Zootropolis 2", "Zootopia 2", "Mandalorian", "Minions 3",
+    "Obsession", "Disclosure Day", "Magic Faraway Tree", "Hoppers", "Scary Movie", "KPop Demon Hunters",
+)
+
+/** The UK's most watched and streamed series of 2026. */
+private val POPULAR_SHOWS = listOf(
+    "The Traitors", "The Night Manager", "Adolescence", "Blue Lights", "Run Away", "Stranger Things", "Slow Horses",
+    "The White Lotus", "Severance", "The Last of Us", "House of the Dragon", "Fallout", "Squid Game", "Wednesday",
+    "Bridgerton", "Ted Lasso", "Brooklyn Nine-Nine", "The Rookie", "Reacher", "The Boys", "Happy Valley", "Gogglebox",
+)

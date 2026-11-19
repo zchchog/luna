@@ -91,11 +91,14 @@ class MainActivity : ComponentActivity() {
                 .collect { (on, language) -> app.player.setSubtitles(on, language) }
         }
         setContent {
-            val themeId = app.settings.collectAsState().value.theme
-            // Luna always uses the teal look; the saved colour choice is ignored.
+            val appSettings = app.settings.collectAsState().value
+            val themeId = appSettings.theme
+            // Luna's teal look, or the seasonal Christmas one (Settings > Appearance).
+            val christmas = appSettings.themeColour == tv.luna.player.data.settings.ThemeColour.CHRISTMAS
+            tv.luna.player.ui.theme.Palette.christmas = christmas
             val density = androidx.compose.ui.platform.LocalDensity.current
             val conf = androidx.compose.ui.platform.LocalConfiguration.current
-            CompositionLocalProvider(LocalTheme provides remember(themeId) { themeOf(themeId, tv.luna.player.data.settings.ThemeColour.TEAL) }) {
+            CompositionLocalProvider(LocalTheme provides remember(themeId, christmas) { themeOf(themeId, if (christmas) tv.luna.player.data.settings.ThemeColour.CHRISTMAS else tv.luna.player.data.settings.ThemeColour.TEAL) }) {
             MaterialTheme(colorScheme = darkColorScheme()) {
             // Luna and Liquid Glass: every TV Text in Inter (the website's font). Inside MaterialTheme, which
             // otherwise sets its own sans-serif text style over anything provided outside it.
@@ -181,6 +184,11 @@ class MainActivity : ComponentActivity() {
                     }
                     }
                     screens()
+                    // Christmas theme: gentle snow over the main screens and Settings (never over full-screen video).
+                    if (christmas && (top == Screen.Live || top == Screen.Vod || top == Screen.Search || top == Screen.Recordings ||
+                            top is Screen.Detail || top is Screen.Settings)) {
+                        tv.luna.player.ui.theme.Snowfall(Modifier.fillMaxSize())
+                    }
                     // The Luna logo, faint, in the top-right corner of the main screens (not over full-screen video or Settings,
                     // which has its own).
                     if (top == Screen.Live || top == Screen.Vod || top == Screen.Search || top == Screen.Recordings || top is Screen.Detail) {

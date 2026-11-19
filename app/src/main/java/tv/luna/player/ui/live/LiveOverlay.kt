@@ -147,8 +147,8 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
                     Text(cur?.title ?: "No guide information", fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = Color.White,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("LIVE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF06323A),
-                            modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFF5FD6DC)).padding(horizontal = 6.dp, vertical = 1.dp))
+                        Text("LIVE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = tv.luna.player.ui.theme.Palette.ink,
+                            modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(tv.luna.player.ui.theme.Palette.accent).padding(horizontal = 6.dp, vertical = 1.dp))
                         if (recordingId != null) Text("● REC", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White,
                             modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(0xFFD64545)).padding(horizontal = 6.dp, vertical = 1.dp))
                         if (cur != null) Text("${(cur.stop - now + 59_999) / 60_000} min left", fontSize = 13.sp, color = LocalTheme.current.colors.muted)
@@ -175,7 +175,7 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
             if (cur != null && progress != null) Row(Modifier.padding(start = 48.dp, end = 48.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(clockTime(cur.start), fontSize = 12.sp, color = Color.White)
                 Box(Modifier.padding(horizontal = 12.dp).weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color(0x40FFFFFF))) {
-                    Box(Modifier.fillMaxHeight().fillMaxWidth(progress).clip(RoundedCornerShape(3.dp)).background(Color(0xFF5FD6DC)))
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(progress).clip(RoundedCornerShape(3.dp)).background(tv.luna.player.ui.theme.Palette.accent))
                 }
                 Text(clockTime(cur.stop), fontSize = 12.sp, color = Color(0xCCEFFBFC))
             }
@@ -324,8 +324,8 @@ private fun MoreHint(label: String) {
     Row(Modifier.padding(start = 48.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Canvas(Modifier.size(12.dp, 8.dp)) {
             val sw = 2.dp.toPx()
-            drawLine(Color(0xFF5FD6DC), Offset(sw, sw), Offset(size.width / 2, size.height - sw), sw, androidx.compose.ui.graphics.StrokeCap.Round)
-            drawLine(Color(0xFF5FD6DC), Offset(size.width - sw, sw), Offset(size.width / 2, size.height - sw), sw, androidx.compose.ui.graphics.StrokeCap.Round)
+            drawLine(tv.luna.player.ui.theme.Palette.accent, Offset(sw, sw), Offset(size.width / 2, size.height - sw), sw, androidx.compose.ui.graphics.StrokeCap.Round)
+            drawLine(tv.luna.player.ui.theme.Palette.accent, Offset(size.width - sw, sw), Offset(size.width / 2, size.height - sw), sw, androidx.compose.ui.graphics.StrokeCap.Round)
         }
         Text("  $label", fontSize = 12.sp, color = LocalTheme.current.colors.muted)
     }
@@ -337,7 +337,7 @@ private fun RoundControl(modifier: Modifier = Modifier, onClick: () -> Unit, ico
     FocusBox(onClick = onClick, modifier = modifier) { f ->
         Box(Modifier.size(52.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (f) Color(0xFFEFFBFC) else Color(0x33FFFFFF))
             .border(1.dp, if (f) Color.Transparent else Color(0x40FFFFFF), androidx.compose.foundation.shape.CircleShape),
-            contentAlignment = Alignment.Center) { icon(if (f) Color(0xFF06323A) else Color.White) }
+            contentAlignment = Alignment.Center) { icon(if (f) tv.luna.player.ui.theme.Palette.ink else Color.White) }
     }
 }
 

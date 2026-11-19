@@ -57,9 +57,9 @@ import kotlinx.coroutines.delay
 import tv.luna.player.player.PlayerManager
 import tv.luna.player.player.TrackOption
 
-private val Accent = Color(0xFF5FD6DC)
+private val Accent: Color get() = tv.luna.player.ui.theme.Palette.accent
 private val Glow = Color(0xFFEFFBFC)
-private val Ink = Color(0xFF06323A)
+private val Ink: Color get() = tv.luna.player.ui.theme.Palette.ink
 private val OK_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
 
 private fun clock(ms: Long): String {
@@ -336,7 +336,7 @@ private fun TrackList(title: String, options: List<Pair<String, Boolean>>, onPic
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
         Column(
             Modifier.padding(end = 48.dp).width(300.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xF206323A))
-                .border(1.dp, Color(0x525FD6DC), RoundedCornerShape(18.dp)).padding(14.dp),
+                .border(1.dp, tv.luna.player.ui.theme.Palette.navBorder, RoundedCornerShape(18.dp)).padding(14.dp),
         ) {
             Text(title.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, color = Accent,
                 modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))

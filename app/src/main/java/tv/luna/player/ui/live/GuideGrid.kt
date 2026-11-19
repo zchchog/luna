@@ -183,7 +183,7 @@ private fun GuideRow(
             Row(
                 Modifier.fillMaxSize()
                     .graphicsLayer { val s = if (f && !style.boxed) 1.03f else 1f; scaleX = s; scaleY = s }
-                    .then(if (f && !style.boxed) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = Color(0xFFB5F1F4), spotColor = Color(0xFFB5F1F4)) else Modifier)
+                    .then(if (f && !style.boxed) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = tv.luna.player.ui.theme.Palette.glow, spotColor = tv.luna.player.ui.theme.Palette.glow) else Modifier)
                     .background(if (f) colors.focus else if (focusedRow) Color(0x40FFFFFF) else colors.cell, if (style.boxed) BOX else PILL)
                     .padding(horizontal = 11.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -267,7 +267,7 @@ private fun GuideRow(
 }
 
 private val REC_DOT = Color(0xFFE53935)
-private val BELL = Color(0xFF5FD6DC)
+private val BELL: Color get() = tv.luna.player.ui.theme.Palette.accent
 
 private val GLOW_ROOM = 24.dp
 

@@ -94,8 +94,8 @@ fun ProviderFormScreen(vm: AppViewModel, editId: Long? = null) {
 private enum class Step { CHOOSE, FORM }
 
 // Luna's setup colours (on top of the teal theme).
-private val Ink = Color(0xFF06323A)
-private val InkMid = Color(0xFF0D6F7A)
+private val Ink: Color get() = tv.luna.player.ui.theme.Palette.ink
+private val InkMid: Color get() = tv.luna.player.ui.theme.Palette.inkMid
 private val Soft = Color(0xD1EFFBFC)
 private val Faint = Color(0x99EFFBFC)
 private val Problem = Color(0xFFFFC9BF)
@@ -376,7 +376,7 @@ private fun Connecting(progress: String?) {
                 infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Restart), label = "slide")
             BoxWithConstraints(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color(0x26FFFFFF))) {
                 Box(Modifier.offset(x = maxWidth * (t * 1.35f - .35f)).width(maxWidth * .35f).height(6.dp)
-                    .background(Brush.horizontalGradient(listOf(Color(0xFF8FE3E6), Color(0xFFEFFBFC))), RoundedCornerShape(3.dp)))
+                    .background(Brush.horizontalGradient(listOf(tv.luna.player.ui.theme.Palette.moon, Color(0xFFEFFBFC))), RoundedCornerShape(3.dp)))
             }
         }
         Text("Big services can take a minute the first time", fontSize = 11.sp, color = Faint)
