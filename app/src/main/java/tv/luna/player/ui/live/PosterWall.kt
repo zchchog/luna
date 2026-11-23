@@ -47,8 +47,10 @@ import tv.luna.player.IptvApp
 fun PosterWall(modifier: Modifier) {
     val ctx = LocalContext.current.applicationContext
     val c = (ctx as IptvApp).container
-    val posters by produceState(emptyList<String>()) {
+    val posters by produceState(cachedWall?.second.orEmpty()) {
         val p = c.providerRepository.activeProviderId.first() ?: return@produceState
+        // Already checked for this playlist since the app opened: show it at once.
+        cachedWall?.takeIf { it.first == p && it.second.size >= 6 }?.let { value = it.second; return@produceState }
         // UK favourites of 2026 first (when the playlist has them), topped up with the newest additions.
         val popular = buildList {
             val n = maxOf(POPULAR_FILMS.size, POPULAR_SHOWS.size)
@@ -61,24 +63,31 @@ fun PosterWall(modifier: Modifier) {
         val shows = runCatching { c.db.seriesDao().newestPosters(p, 30) }.getOrDefault(emptyList())
         val newest = films.zip(shows).flatMap { listOf(it.first, it.second) } + films.drop(shows.size) + shows.drop(films.size)
         // Only covers whose picture really loads, so the wall never shows empty tiles (dead links are skipped).
-        val candidates = (popular + newest).distinct().take(72)
+        val candidates = (popular + newest).distinct().take(48)
         val loader = coil.Coil.imageLoader(ctx)
         val gate = kotlinx.coroutines.sync.Semaphore(4) // a few at a time, so loading never slows the guide down
-        val ok = kotlinx.coroutines.coroutineScope {
+        // The wall appears as soon as six covers have loaded and fills up as the rest are checked, instead of
+        // waiting for every cover (a slow or dead link could otherwise keep it away for minutes).
+        val good = java.util.Collections.synchronizedList(ArrayList<String>())
+        kotlinx.coroutines.coroutineScope {
             candidates.map { url ->
                 async {
                     val r = gate.withPermit {
                         runCatching {
-                            kotlinx.coroutines.withTimeoutOrNull(8_000) {
+                            kotlinx.coroutines.withTimeoutOrNull(5_000) {
                                 loader.execute(coil.request.ImageRequest.Builder(ctx).data(url).size(200, 300).build())
                             }
                         }.getOrNull()
                     }
-                    url.takeIf { r is coil.request.SuccessResult }
+                    if (r is coil.request.SuccessResult) {
+                        good += url
+                        if (good.size == 6 || good.size % 6 == 0) value = good.toList().take(36)
+                    }
                 }
-            }.awaitAll().filterNotNull()
+            }.awaitAll()
         }
-        value = ok.take(36)
+        value = good.toList().take(36)
+        cachedWall = p to value
     }
     if (posters.size < 6) return
     // Structured motion: tilted columns gliding in a steady loop, alternate columns going up and down
@@ -137,6 +146,9 @@ fun PosterWall(modifier: Modifier) {
         }
     }
 }
+
+/** The covers last checked for the wall (playlist id to covers), so coming back to the guide shows it straight away. */
+private var cachedWall: Pair<Long, List<String>>? = null
 
 /** The UK's most popular films of 2026 (box office). */
 private val POPULAR_FILMS = listOf(
