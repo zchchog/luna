@@ -28,6 +28,13 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.fillMaxHeight
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
@@ -142,24 +149,32 @@ fun RecordingsScreen(nav: (@Composable () -> Unit)?, onPlay: (RecordingEntity) -
                 "Didn't record" to all.filter { it.status == RecStatus.FAILED || it.status == RecStatus.SKIPPED || it.status == RecStatus.MISSED },
             ).filter { it.second.isNotEmpty() }
             val firstId = sections.firstOrNull()?.second?.firstOrNull()?.id
-            // Entering the list (Down from the menu) lands on a row: the last one used, else the first.
+            // Entering the list (Down from the menu) lands on a card: the last one used, else the first.
             val enterRow = (lastRow?.takeIf { id -> list.orEmpty().any { it.id == id } } ?: firstId)?.let { rowFocus[it] }
-            LazyColumn(Modifier.padding(top = if (nav != null) 24.dp else 8.dp)
+            LazyColumn(Modifier.padding(top = if (nav != null) 8.dp else 8.dp)
                 .focusProperties { enter = { enterRow ?: androidx.compose.ui.focus.FocusRequester.Default } }.focusGroup(),
-                verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                verticalArrangement = Arrangement.spacedBy(14.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 60.dp)) {
+                item(key = "header") { RecordingsHeader(c, all.count { it.playable() }, all.count { it.status == RecStatus.SCHEDULED }) }
                 sections.forEach { (heading, items) ->
                     item(key = "h-$heading") {
-                        Text(heading.uppercase(), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.5.sp, color = colors.muted,
-                            modifier = Modifier.padding(top = 14.dp, bottom = 4.dp, start = 4.dp))
+                        Text(heading.uppercase(), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, color = colors.muted,
+                            modifier = Modifier.padding(top = 10.dp, start = 4.dp))
                     }
-                    items(items, key = { it.id }) { r ->
-                        FocusBox(
-                            onClick = { if (r.playable()) onPlay(r) else menu = r to false },
-                            modifier = (if (r.id == firstId) firstModifier else Modifier)
-                                .focusRequester(rowFocus.getOrPut(r.id) { androidx.compose.ui.focus.FocusRequester() })
-                                .onLongOk { menu = r to false },
-                            onFocused = { lastRow = r.id },
-                        ) { f -> RecordingRow(r, f, textColor) }
+                    // Cards three across, so a long list stays a calm grid instead of a wall of rows.
+                    items(items.chunked(3), key = { row -> "r-" + row.first().id }) { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            row.forEach { r ->
+                                FocusBox(
+                                    onClick = { if (r.playable()) onPlay(r) else menu = r to false },
+                                    modifier = Modifier.weight(1f)
+                                        .then(if (r.id == firstId) firstModifier else Modifier)
+                                        .focusRequester(rowFocus.getOrPut(r.id) { androidx.compose.ui.focus.FocusRequester() })
+                                        .onLongOk { menu = r to false },
+                                    onFocused = { lastRow = r.id },
+                                ) { f -> RecordingCard(r, f, textColor) }
+                            }
+                            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
                     }
                 }
             }
@@ -168,25 +183,74 @@ fun RecordingsScreen(nav: (@Composable () -> Unit)?, onPlay: (RecordingEntity) -
     menu?.let { (r, all) -> RecordingMenu(r, all, onPlay) { menu = null } }
 }
 
+/** The page's title, and one quiet line: where recordings go, what is free, and how many there are. */
 @Composable
-private fun RecordingRow(r: RecordingEntity, f: Boolean, textColor: Color) {
+private fun RecordingsHeader(c: tv.luna.player.AppContainer, recorded: Int, scheduled: Int) {
+    val settings by c.settings.settings.collectAsState(null)
+    val place = when (settings?.recordTo) {
+        RecStorage.USB -> "USB drive"; RecStorage.SMB -> "Network share"; else -> "This box"
+    }
+    val free by androidx.compose.runtime.produceState<Long?>(null, settings?.recordTo, settings?.recordUsbPath) {
+        val st = settings ?: return@produceState
+        value = withContext(Dispatchers.IO) { runCatching { c.recordingStore(st)?.freeBytes() }.getOrNull() }
+    }
+    Column(Modifier.padding(start = 4.dp, top = 6.dp)) {
+        Text("Recordings", fontSize = 30.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+        val line = buildList {
+            add("Saving to $place")
+            free?.let { add(freeSpaceText(it)) }
+            if (recorded + scheduled > 0) add("$recorded recorded, $scheduled scheduled")
+        }.joinToString("  ·  ")
+        Text(line, fontSize = 13.sp, color = Color(0xB3FFFFFF), modifier = Modifier.padding(top = 4.dp))
+    }
+}
+
+/** One recording as a card: channel logo, a status pill, the title, when it was on, and how far you have watched. */
+@Composable
+private fun RecordingCard(r: RecordingEntity, f: Boolean, textColor: Color) {
     val colors = LocalTheme.current.colors
     val fg = if (f) colors.onFocus else textColor
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (f) SolidColor(colors.focus) else fadeRight(colors.cell)).padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(64.dp, 40.dp), contentAlignment = Alignment.Center) {
-            if (r.channelLogo != null) coil.compose.AsyncImage(r.channelLogo, null, Modifier.fillMaxSize())
-            else Text(r.channelName.take(3), fontSize = 13.sp, color = fg, maxLines = 1)
+    val shape = RoundedCornerShape(16.dp)
+    val recording = r.status == RecStatus.RECORDING
+    val failed = r.status == RecStatus.FAILED || r.status == RecStatus.SKIPPED || r.status == RecStatus.MISSED
+    val length = r.actualEnd?.let { e -> e - (r.actualStart ?: r.scheduledStart) }
+    val watched = if (length != null && length > 0 && r.positionMs > 0) (r.positionMs.toFloat() / length).coerceIn(0f, 1f) else null
+    Column(
+        Modifier.fillMaxWidth().height(142.dp)
+            .graphicsLayer { val sc = if (f) 1.03f else 1f; scaleX = sc; scaleY = sc }
+            .then(if (f) Modifier.shadow(18.dp, shape, ambientColor = tv.luna.player.ui.theme.Palette.glow, spotColor = tv.luna.player.ui.theme.Palette.glow) else Modifier)
+            .clip(shape)
+            .background(if (f) SolidColor(colors.focus) else Brush.linearGradient(listOf(Color(0x663170E2), Color(0x331F63E0))))
+            .border(1.dp, if (f) Color.Transparent else Color(0x33FFFFFF), shape)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(52.dp, 32.dp), contentAlignment = Alignment.CenterStart) {
+                if (r.channelLogo != null) coil.compose.AsyncImage(r.channelLogo, null, Modifier.fillMaxSize(), alignment = Alignment.CenterStart)
+                else Text(r.channelName.take(3), fontSize = 13.sp, color = fg, maxLines = 1)
+            }
+            Spacer(Modifier.weight(1f))
+            val pill = when {
+                recording -> "● REC"
+                r.status == RecStatus.SCHEDULED -> if (r.seriesId != null) "SERIES" else "SCHEDULED"
+                failed -> "DIDN'T RECORD"
+                r.seriesId != null -> "SERIES"
+                else -> null
+            }
+            if (pill != null) Text(pill, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = .6.sp,
+                color = if (recording || failed) Color.White else if (f) colors.onFocus else Color.White,
+                modifier = Modifier.clip(RoundedCornerShape(5.dp))
+                    .background(when { recording -> Color(0xFFE53935); failed -> Color(0xFF8A3A3A); f -> Color(0x1F000000); else -> Color(0x33FFFFFF) })
+                    .padding(horizontal = 7.dp, vertical = 2.dp))
         }
-        Spacer(Modifier.width(16.dp))
-        Column(Modifier.weight(1f)) {
-            Text(r.title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${r.channelName} · ${recordingWhen(r)}${if (r.seriesId != null) " · Series" else ""}", fontSize = 12.sp, color = fg.copy(alpha = .75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        val status = recordingStatus(r)
-        if (status.isNotEmpty()) {
-            Spacer(Modifier.width(12.dp))
-            Text(status, fontSize = 13.sp, color = if (r.status == RecStatus.RECORDING) Color(0xFFE53935) else fg.copy(alpha = .85f), maxLines = 1)
+        Column {
+            Text(r.title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val detail = if (failed) recordingStatus(r) else if (recording) recordingStatus(r) else "${r.channelName} · ${recordingWhen(r)}"
+            Text(detail, fontSize = 12.sp, color = fg.copy(alpha = .75f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+            if (watched != null) Box(Modifier.padding(top = 8.dp).fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(fg.copy(alpha = .22f))) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(watched).background(if (f) colors.onFocus else tv.luna.player.ui.theme.Palette.accent))
+            }
         }
     }
 }

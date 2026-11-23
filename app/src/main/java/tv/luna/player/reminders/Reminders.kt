@@ -55,10 +55,12 @@ class Reminders(private val context: Context, private val db: AppDatabase, priva
         if (dao.all().any { it.channelId == ch.id && it.programmeStart == p.start }) return
         val id = dao.insert(ReminderEntity(channelId = ch.id, programmeStart = p.start, title = p.title))
         arm(id, p.start)
+        prompt.value = Prompt.Notice("Reminder set: ${p.title}, ${tv.luna.player.ui.dayDate(p.start)} ${tv.luna.player.ui.clockTime(p.start)}")
     }
 
     suspend fun cancel(ch: ChannelEntity, p: GuideProgramme) {
         dao.all().filter { it.channelId == ch.id && it.programmeStart == p.start }.forEach { alarms.cancel(intent(it.id)); dao.delete(it.id) }
+        prompt.value = Prompt.Notice("Reminder cancelled")
     }
 
     /** After a restart (boot and updates clear alarms): set them again, and drop ones long past. */

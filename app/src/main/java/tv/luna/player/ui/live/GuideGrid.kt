@@ -156,7 +156,12 @@ fun GuideGrid(
                                 state.menu = if (state.onChannel || p == null) GuideMenu.Channel(ch) else GuideMenu.Programme(ch, p)
                             },
                         onFocused = { vm.focused.value = ch; state.focusIndex = i },
-                        onClick = { state.onOk(ch, onFullScreen) },
+                        onClick = {
+                            // OK on a programme that hasn't started opens Record / Remind straight away; otherwise it plays as before.
+                            val p = programmes[ch.id].orEmpty().firstOrNull { it.start <= at && at < it.stop }
+                            if (!state.onChannel && p != null && p.start > now) { state.focusIndex = i; state.menu = GuideMenu.Programme(ch, p) }
+                            else state.onOk(ch, onFullScreen)
+                        },
                     )
                 }
             }

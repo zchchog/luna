@@ -83,38 +83,42 @@ fun GuideMenus(vm: LiveViewModel, state: GuideState, onFullScreen: (ChannelEntit
             val reminded = (m.ch.id to m.p.start) in reminderMarks
             val rules by vm.seriesRules.collectAsState()
             val rule = rules.firstOrNull { it.channelId == m.ch.id && it.title.equals(m.p.title, ignoreCase = true) }
-            ContextMenu(progTitle(m.ch.displayName(strip), m.p), buildList {
-                add((if (live) "Play" else "Watch this channel") to { state.menu = null; onFullScreen(m.ch) })
-                if (m.p.stop > now) {
-                    add((if (recorded) (if (live) "Stop recording this episode" else "Cancel this episode") else "Record episode") to {
-                        when {
-                            recorded && live -> { recordingOnChannel[m.ch.id]?.let(vm::stopRecording); state.menu = null }
-                            recorded -> { vm.cancelRecording(m.ch, m.p); state.menu = null }
-                            !recordingOn -> recordHere(m.ch, if (live) RecordNext.NOW else RecordNext.PROGRAMME, m.p)
-                            live -> { vm.recordNow(m.ch); state.menu = null }
-                            else -> { vm.schedule(m.ch, m.p); state.menu = null }
-                        }
-                    })
-                    // A series rule keeps scheduling every new showing of this title on this channel until it is stopped.
-                    if (rule != null) add("Stop recording the series" to { state.menu = GuideMenu.StopSeries(rule) })
-                    else add("Record series" to {
-                        if (recordingOn) vm.recordSeries(m.ch, m.p)
-                        else scope.launch { vm.setRecordPlace(tv.luna.player.recording.RecStorage.INTERNAL); vm.recordSeries(m.ch, m.p) }
-                        state.menu = null
-                    })
+            val future = m.p.start > now
+            val watch = (if (live) "Play" else "Watch this channel") to { state.menu = null; onFullScreen(m.ch) }
+            val recordItem = (if (recorded) (if (live) "Stop recording this episode" else "Cancel this episode") else "Record episode") to {
+                when {
+                    recorded && live -> { recordingOnChannel[m.ch.id]?.let(vm::stopRecording); state.menu = null }
+                    recorded -> { vm.cancelRecording(m.ch, m.p); state.menu = null }
+                    !recordingOn -> recordHere(m.ch, if (live) RecordNext.NOW else RecordNext.PROGRAMME, m.p)
+                    live -> { vm.recordNow(m.ch); state.menu = null }
+                    else -> { vm.schedule(m.ch, m.p); state.menu = null }
                 }
-                if (!live && m.p.start > now) add((if (reminded) "Cancel reminder" else "Remind me") to {
-                    if (reminded) vm.cancelReminder(m.ch, m.p) else {
-                        val activity = context as? android.app.Activity
-                        if (android.os.Build.VERSION.SDK_INT >= 33 && activity != null &&
-                            activity.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                            activity.requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7)
-                        }
-                        vm.remind(m.ch, m.p)
+            }
+            // A series rule keeps scheduling every new showing of this title on this channel until it is stopped.
+            val seriesItem = if (rule != null) "Stop recording the series" to { state.menu = GuideMenu.StopSeries(rule) }
+            else "Record series" to {
+                if (recordingOn) vm.recordSeries(m.ch, m.p)
+                else scope.launch { vm.setRecordPlace(tv.luna.player.recording.RecStorage.INTERNAL); vm.recordSeries(m.ch, m.p) }
+                state.menu = null
+            }
+            val remindItem = (if (reminded) "Cancel reminder" else "Remind me") to {
+                if (reminded) vm.cancelReminder(m.ch, m.p) else {
+                    val activity = context as? android.app.Activity
+                    if (android.os.Build.VERSION.SDK_INT >= 33 && activity != null &&
+                        activity.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                        activity.requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 7)
                     }
-                    state.menu = null
-                })
-            }) { state.menu = null }
+                    vm.remind(m.ch, m.p)
+                }
+                state.menu = null
+            }
+            // A programme still to come: what you want is Record or Remind, so they come first and the highlight starts on Record.
+            val items = when {
+                m.p.stop <= now -> listOf(watch)
+                future -> listOf(recordItem, remindItem, seriesItem, watch)
+                else -> listOf(watch, recordItem, seriesItem)
+            }
+            ContextMenu(progTitle(m.ch.displayName(strip), m.p), items) { state.menu = null }
         }
         is GuideMenu.StopSeries -> ContextMenu("Stop recording ${m.rule.title}?\n${m.rule.channelName}", listOf(
             "Stop the series, keep what's recorded" to { vm.stopSeries(m.rule.id, false); state.menu = null },
