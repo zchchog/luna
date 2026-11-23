@@ -61,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.ProvideTextStyle
 import androidx.tv.material3.Text
 import tv.luna.player.data.settings.LogoKind
 import tv.luna.player.ui.ChannelLogo
@@ -70,6 +71,9 @@ import tv.luna.player.data.repo.GuideProgramme
 import tv.luna.player.player.badges
 import tv.luna.player.ui.FocusBox
 import tv.luna.player.ui.clockTime
+
+/** A soft dark edge behind text drawn straight over the picture, so it stays readable on bright scenes. */
+private val SHADOW = androidx.compose.ui.text.TextStyle(shadow = androidx.compose.ui.graphics.Shadow(Color(0xCC000000), Offset(0f, 2f), 8f))
 
 /** What the viewer is adjusting in a popup. */
 private enum class Popup { AUDIO, SUBTITLES, QUALITY, PICTURE, DELAY, VERSIONS, RECORD_WHERE }
@@ -134,13 +138,17 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
 
     Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color(0x99000000), .18f to Color.Transparent)))
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(.45f to Color.Transparent, .75f to Color(0xD9000000), 1f to Color(0xF2000000))))
-        Text(entry?.title.orEmpty(), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1,
+        Text(entry?.title.orEmpty(), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1, style = SHADOW,
             modifier = Modifier.align(Alignment.TopStart).padding(start = 48.dp, top = 28.dp))
-        Text(clockTime(now), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.White,
+        Text(clockTime(now), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.White, style = SHADOW,
             modifier = Modifier.align(Alignment.TopEnd).padding(end = 48.dp, top = 26.dp))
 
-        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth()) {
+        // The dark backing belongs to this column, so it grows with it: opening the settings or the guide row pushes the info
+        // up, and the dark goes up with it instead of leaving the text over bright picture.
+        Column(Modifier.align(Alignment.BottomStart).fillMaxWidth()
+            .background(Brush.verticalGradient(0f to Color.Transparent, .2f to Color(0xA6000000), .45f to Color(0xD9000000), 1f to Color(0xF2000000)))
+            .padding(top = 64.dp)) {
+            ProvideTextStyle(SHADOW) {
             Row(Modifier.padding(horizontal = 48.dp), verticalAlignment = Alignment.Top) {
                 Box(Modifier.size(84.dp, 60.dp).clip(RoundedCornerShape(4.dp)).background(Color(0x33FFFFFF)), contentAlignment = Alignment.Center) {
                     ChannelLogo(ch, logoSource, Modifier.fillMaxSize().padding(6.dp), fontSize = 18.sp)
@@ -175,24 +183,26 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
                     }
                 }
             }
-            // The programme's progress: a rounded blue bar with its start and end times either side.
-            if (cur != null && progress != null) Row(Modifier.padding(start = 48.dp, end = 48.dp, top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(clockTime(cur.start), fontSize = 12.sp, color = Color.White)
-                Box(Modifier.padding(horizontal = 12.dp).weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color(0x40FFFFFF))) {
-                    Box(Modifier.fillMaxHeight().fillMaxWidth(progress).clip(RoundedCornerShape(3.dp)).background(tv.luna.player.ui.theme.Palette.accent))
-                }
-                Text(clockTime(cur.stop), fontSize = 12.sp, color = Color(0xCCEEF3FF))
             }
-            // First glance: play/pause and record. Down shows the stream's settings; Down again, the TV guide and recent channels.
+            // The programme's progress (start time, rounded bar, end time) with the small play/pause and record buttons at its end.
+            // Down shows the stream's settings; Down again, the TV guide and recent channels.
             Row(
-                Modifier.padding(start = 48.dp, end = 48.dp, top = 14.dp)
+                Modifier.padding(start = 48.dp, end = 48.dp, top = 12.dp)
                     .onPreviewKeyEvent { e ->
                         if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionDown && !showSettings) { showSettings = true; true } else false
                     },
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (cur != null && progress != null) ProvideTextStyle(SHADOW) {
+                    Text(clockTime(cur.start), fontSize = 12.sp, color = Color.White)
+                    Box(Modifier.padding(horizontal = 12.dp).weight(1f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color(0x40FFFFFF))) {
+                        Box(Modifier.fillMaxHeight().fillMaxWidth(progress).clip(RoundedCornerShape(3.dp)).background(tv.luna.player.ui.theme.Palette.accent))
+                    }
+                    Text(clockTime(cur.stop), fontSize = 12.sp, color = Color(0xCCEEF3FF))
+                } else Spacer(Modifier.weight(1f))
+                Spacer(Modifier.width(20.dp))
                 RoundControl(Modifier.focusRequester(pauseFocus), player::togglePause) { c -> PlayPauseIcon(paused, c) }
+                Spacer(Modifier.width(14.dp))
                 // Record this channel now (asks where to save the first time), or stop the recording.
                 RoundControl(Modifier.focusRequester(buttonFocus.getValue(Popup.RECORD_WHERE)), onClick = {
                     when {
@@ -344,7 +354,7 @@ private fun ControlButton(
 @Composable
 private fun SectionLabel(label: String) {
     Text(label.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp,
-        color = LocalTheme.current.colors.muted, modifier = Modifier.padding(start = 48.dp, top = 14.dp))
+        color = Color(0xCCFFFFFF), style = SHADOW, modifier = Modifier.padding(start = 48.dp, top = 14.dp))
 }
 
 /** "⌄ Stream settings": a small arrow and what Down will show. */
@@ -356,7 +366,7 @@ private fun MoreHint(label: String) {
             drawLine(tv.luna.player.ui.theme.Palette.accent, Offset(sw, sw), Offset(size.width / 2, size.height - sw), sw, androidx.compose.ui.graphics.StrokeCap.Round)
             drawLine(tv.luna.player.ui.theme.Palette.accent, Offset(size.width - sw, sw), Offset(size.width / 2, size.height - sw), sw, androidx.compose.ui.graphics.StrokeCap.Round)
         }
-        Text("  $label", fontSize = 12.sp, color = LocalTheme.current.colors.muted)
+        Text("  $label", fontSize = 12.sp, color = Color(0xCCFFFFFF), style = SHADOW)
     }
 }
 
@@ -364,7 +374,7 @@ private fun MoreHint(label: String) {
 @Composable
 private fun RoundControl(modifier: Modifier = Modifier, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
     FocusBox(onClick = onClick, modifier = modifier) { f ->
-        Box(Modifier.size(52.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (f) Color(0xFFEEF3FF) else Color(0x33FFFFFF))
+        Box(Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (f) Color(0xFFEEF3FF) else Color(0x33FFFFFF))
             .border(1.dp, if (f) Color.Transparent else Color(0x40FFFFFF), androidx.compose.foundation.shape.CircleShape),
             contentAlignment = Alignment.Center) { icon(if (f) tv.luna.player.ui.theme.Palette.ink else Color.White) }
     }
@@ -373,7 +383,7 @@ private fun RoundControl(modifier: Modifier = Modifier, onClick: () -> Unit, ico
 /** A red dot (record), or a red square in a ring while recording (stop). */
 @Composable
 private fun RecordIcon(recording: Boolean, color: Color) {
-    Canvas(Modifier.size(18.dp)) {
+    Canvas(Modifier.size(14.dp)) {
         val red = Color(0xFFE05555)
         if (recording) {
             drawCircle(red, radius = size.minDimension / 2, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()))
@@ -385,7 +395,7 @@ private fun RecordIcon(recording: Boolean, color: Color) {
 /** Two bars while playing (the button pauses), a triangle while paused (the button plays). */
 @Composable
 private fun PlayPauseIcon(paused: Boolean, color: Color) {
-    Canvas(Modifier.size(16.dp)) {
+    Canvas(Modifier.size(12.dp)) {
         if (paused) {
             val tri = Path().apply { moveTo(size.width * .15f, 0f); lineTo(size.width, size.height / 2); lineTo(size.width * .15f, size.height); close() }
             drawPath(tri, color)

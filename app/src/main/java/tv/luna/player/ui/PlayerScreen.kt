@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -122,7 +123,7 @@ fun PlayerScreen(player: PlayerManager, title: String, liveVm: LiveViewModel? = 
         }
         if (liveVm == null) VodControls(player, title, nextLabel, nextAtSeconds, autoNext, onNext)
         error?.let {
-            Text(it, color = Color.White, modifier = Modifier.align(Alignment.Center).background(Color(0xCC000000)).padding(24.dp))
+            Text(it, color = Color.White, modifier = Modifier.align(Alignment.Center).offset(y = (-110).dp).background(Color(0xCC000000)).padding(24.dp))
         }
     }
 }
