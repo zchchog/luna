@@ -28,7 +28,6 @@ import tv.luna.player.data.repo.ProviderRepository
 import tv.luna.player.data.repo.channel
 import tv.luna.player.data.repo.live
 import tv.luna.player.data.settings.SettingsRepository
-import tv.luna.player.data.settings.ThemeColour
 
 @RunWith(RobolectricTestRunner::class)
 class BackupTest {
@@ -74,7 +73,7 @@ class BackupTest {
         providers.addEpgSource(p, "http://guide/uk.xml", "UK guide")
         db.providerDao().setCategoryStrip(p, "UK|")
         db.epgDao().sources(p).first().let { db.epgDao().setOffset(it.id, 60) }
-        settings.update { it.copy(themeColour = ThemeColour.RED, confirmExit = false, epgDaysToKeep = 3) }
+        settings.update { it.copy(confirmExit = false, epgDaysToKeep = 3) }
         return p
     }
 

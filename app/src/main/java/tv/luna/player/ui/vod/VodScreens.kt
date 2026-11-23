@@ -186,7 +186,7 @@ fun Poster(item: VodItem?, modifier: Modifier = Modifier, caption: Boolean = fal
                 .size(110.dp, 165.dp).clip(RoundedCornerShape(6.dp)).background(LocalTheme.current.colors.vodCard),
             contentAlignment = Alignment.BottomStart,
         ) {
-            // Under the poster: a Luna teal card with the title, so a missing or broken cover still looks like it belongs.
+            // Under the poster: a Luna blue card with the title, so a missing or broken cover still looks like it belongs.
             PosterFallback(item?.name)
             if (item?.poster != null) AsyncImage(item.poster, item.name, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
@@ -195,15 +195,15 @@ fun Poster(item: VodItem?, modifier: Modifier = Modifier, caption: Boolean = fal
     } }
 }
 
-/** The card behind every cover: teal gradient, two faint moons, and the title near the bottom. */
+/** The card behind every cover: blue gradient, two faint moons, and the title near the bottom. */
 @Composable
 fun PosterFallback(title: String?) {
-    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF1C9AA0), Color(0xFF0D6F7A), Color(0xFF06323A)))),
+    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF3459CA), Color(0xFF1A39A6), Color(0xFF0A1753)))),
         contentAlignment = Alignment.BottomStart) {
         androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
             val r = size.minDimension
-            drawCircle(Color(0x17EFFBFC), radius = r * .8f, center = androidx.compose.ui.geometry.Offset(size.width * .9f, size.height * .12f))
-            drawCircle(Color(0x10EFFBFC), radius = r * .48f, center = androidx.compose.ui.geometry.Offset(size.width * .72f, size.height * .3f))
+            drawCircle(Color(0x17EEF3FF), radius = r * .8f, center = androidx.compose.ui.geometry.Offset(size.width * .9f, size.height * .12f))
+            drawCircle(Color(0x10EEF3FF), radius = r * .48f, center = androidx.compose.ui.geometry.Offset(size.width * .72f, size.height * .3f))
             drawRect(Brush.verticalGradient(0f to Color(0x1FFFFFFF), .45f to Color.Transparent), size = androidx.compose.ui.geometry.Size(size.width, size.height * .45f))
         }
         if (title != null) Text(title, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, fontFamily = tv.luna.player.ui.Montserrat, color = Color.White,
@@ -214,7 +214,7 @@ fun PosterFallback(title: String?) {
 @Composable
 fun Backdrop(url: String?) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopEnd) {
-        // Like the live preview: the picture itself fades out at the left and bottom, so the teal background shows through
+        // Like the live preview: the picture itself fades out at the left and bottom, so the blue background shows through
         // (fading to one flat colour left a visible box against the gradient).
         Box(Modifier.size(700.dp, 410.dp)
             .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
@@ -258,7 +258,7 @@ private fun VodRail(cats: List<RailCategory>, selectedId: Long?, focus: FocusReq
     val start = (cats.indexOfFirst { it.category.id == selectedId } + 1).coerceAtLeast(0)
     val state = rememberLazyListState(start)
     Column(
-        Modifier.fillMaxHeight().width(260.dp).shadow(30.dp).background(Color(0xF515171D)).padding(horizontal = 20.dp, vertical = 35.dp)
+        Modifier.fillMaxHeight().width(260.dp).shadow(30.dp).background(tv.luna.player.ui.PanelBrush).padding(horizontal = 20.dp, vertical = 35.dp)
             .onPreviewKeyEvent { e -> if (e.type == KeyEventType.KeyDown && (e.key == Key.Back || e.key == Key.DirectionLeft)) { onClose(); true } else false },
     ) {
         Text("CATEGORIES", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = LocalTheme.current.colors.muted, letterSpacing = 2.sp, modifier = Modifier.padding(bottom = 12.dp))

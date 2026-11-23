@@ -61,7 +61,7 @@ internal fun backgroundBitmap(colors: ThemeColors, density: androidx.compose.ui.
     CanvasDrawScope().draw(density, androidx.compose.ui.unit.LayoutDirection.Ltr, androidx.compose.ui.graphics.Canvas(img), size) {
         translate(-origin.x, -origin.y) {
             drawRect(Brush.linearGradient(colors.bg, end = Offset(screen.width, screen.height)), size = screen)
-            drawRect(Brush.radialGradient(listOf(Color(0x5978E0E6), Color.Transparent), center = Offset(screen.width * .85f, screen.height * .1f), radius = screen.width * .68f), size = screen)
+            drawRect(Brush.radialGradient(listOf(Color(0x5978A0FF), Color.Transparent), center = Offset(screen.width * .85f, screen.height * .1f), radius = screen.width * .68f), size = screen)
         }
     }
     return img

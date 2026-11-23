@@ -68,7 +68,7 @@ fun PosterWall(modifier: Modifier) {
             posters.chunked(7).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     row.forEach { url ->
-                        Box(Modifier.size(100.dp, 150.dp).clip(RoundedCornerShape(8.dp)).background(Color(0x401C9AA0))) {
+                        Box(Modifier.size(100.dp, 150.dp).clip(RoundedCornerShape(8.dp)).background(Color(0x403459CA))) {
                             AsyncImage(url, null, contentScale = ContentScale.Crop, modifier = Modifier.size(100.dp, 150.dp))
                         }
                     }

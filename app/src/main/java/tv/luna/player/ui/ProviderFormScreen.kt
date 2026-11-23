@@ -93,16 +93,16 @@ fun ProviderFormScreen(vm: AppViewModel, editId: Long? = null) {
 
 private enum class Step { CHOOSE, FORM }
 
-// Luna's setup colours (on top of the teal theme).
-private val Ink = Color(0xFF06323A)
-private val InkMid = Color(0xFF0D6F7A)
-private val Soft = Color(0xD1EFFBFC)
-private val Faint = Color(0x99EFFBFC)
+// Luna's setup colours (on top of the blue theme).
+private val Ink = Color(0xFF0A1753)
+private val InkMid = Color(0xFF1A39A6)
+private val Soft = Color(0xD1EEF3FF)
+private val Faint = Color(0x99EEF3FF)
 private val Problem = Color(0xFFFFC9BF)
-private val FocusFill = Brush.verticalGradient(listOf(Color.White, Color(0xFFE3F7F8)))
+private val FocusFill = Brush.verticalGradient(listOf(Color.White, Color(0xFFE3EBFF)))
 private val PanelShape = RoundedCornerShape(18.dp)
 
-private fun Modifier.panel() = clip(PanelShape).background(Color(0x8C052228)).border(1.dp, Color(0x29FFFFFF), PanelShape)
+private fun Modifier.panel() = clip(PanelShape).background(Color(0x8C071040)).border(1.dp, Color(0x29FFFFFF), PanelShape)
 private fun Modifier.glow(on: Boolean, shape: androidx.compose.ui.graphics.Shape) =
     if (on) shadow(22.dp, shape, ambientColor = BrandGlow, spotColor = BrandGlow) else this
 private fun Modifier.grow(on: Boolean, by: Float = 1.05f) = graphicsLayer { val s = if (on) by else 1f; scaleX = s; scaleY = s }
@@ -216,7 +216,7 @@ private fun Choose(onPick: (ProviderType) -> Unit) {
                             withStyle(androidx.compose.ui.text.SpanStyle(color = Color.White, fontWeight = FontWeight.SemiBold)) { append("Element X") }
                             append(" app.")
                         },
-                        fontSize = 12.sp, lineHeight = 18.sp, color = Color(0xE6EFFBFC),
+                        fontSize = 12.sp, lineHeight = 18.sp, color = Color(0xE6EEF3FF),
                     )
                 }
             }
@@ -307,11 +307,11 @@ private fun LunaField(
     val focus = LocalFocusManager.current
     val shape = RoundedCornerShape(11.dp)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xCCEFFBFC))
-        // Selected text: a light teal wash, not the default dark blue.
+        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xCCEEF3FF))
+        // Selected text: a light blue wash, not the default dark blue.
         androidx.compose.runtime.CompositionLocalProvider(
             androidx.compose.foundation.text.selection.LocalTextSelectionColors provides
-                androidx.compose.foundation.text.selection.TextSelectionColors(handleColor = Color.White, backgroundColor = Color(0x66B5F1F4)),
+                androidx.compose.foundation.text.selection.TextSelectionColors(handleColor = Color.White, backgroundColor = Color(0x66A0BEFF)),
         ) {
         BasicTextField(
             value = value, onValueChange = onChange, singleLine = !multiLine, readOnly = !editing,
@@ -333,7 +333,7 @@ private fun LunaField(
             }.onFocusChanged { if (!it.isFocused) editing = false }.fillMaxWidth()
                 .glow(focused, shape).clip(shape)
                 .background(if (focused) Color(0x29FFFFFF) else Color(0x12FFFFFF))
-                .border(2.dp, when { focused -> Color(0xFFEFFBFC); problem -> Color(0xFFFFB4A8); else -> Color(0x38FFFFFF) }, shape)
+                .border(2.dp, when { focused -> Color(0xFFEEF3FF); problem -> Color(0xFFFFB4A8); else -> Color(0x38FFFFFF) }, shape)
                 .padding(horizontal = 15.dp, vertical = 12.dp),
             decorationBox = { inner ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -376,7 +376,7 @@ private fun Connecting(progress: String?) {
                 infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Restart), label = "slide")
             BoxWithConstraints(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color(0x26FFFFFF))) {
                 Box(Modifier.offset(x = maxWidth * (t * 1.35f - .35f)).width(maxWidth * .35f).height(6.dp)
-                    .background(Brush.horizontalGradient(listOf(Color(0xFF8FE3E6), Color(0xFFEFFBFC))), RoundedCornerShape(3.dp)))
+                    .background(Brush.horizontalGradient(listOf(Color(0xFF9CB8FF), Color(0xFFEEF3FF))), RoundedCornerShape(3.dp)))
             }
         }
         Text("Big services can take a minute the first time", fontSize = 11.sp, color = Faint)
@@ -391,11 +391,11 @@ private fun Ready(result: String, edited: Boolean, onGo: () -> Unit) {
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)) {
         Box(Modifier.size(63.dp).shadow(30.dp, CircleShape, ambientColor = BrandGlow, spotColor = BrandGlow).clip(CircleShape)
-            .background(Brush.verticalGradient(listOf(Color.White, Color(0xFFDDF6F8)))), contentAlignment = Alignment.Center) {
+            .background(Brush.verticalGradient(listOf(Color.White, Color(0xFFDDE6FF)))), contentAlignment = Alignment.Center) {
             Icon(CheckIcon, Ink, 33.dp)
         }
         Text(if (edited) "Saved" else "You're all set", fontFamily = Montserrat, fontWeight = FontWeight.SemiBold, fontSize = 33.sp, color = Color.White)
-        Text(result, fontSize = 15.sp, lineHeight = 22.sp, color = Color(0xD9EFFBFC), textAlign = TextAlign.Center, modifier = Modifier.width(600.dp))
+        Text(result, fontSize = 15.sp, lineHeight = 22.sp, color = Color(0xD9EEF3FF), textAlign = TextAlign.Center, modifier = Modifier.width(600.dp))
         PillButton(if (edited) "Done" else "Start watching", Modifier.padding(top = 12.dp).focusRequester(go), width = 225.dp, onClick = onGo)
     }
 }
@@ -478,7 +478,7 @@ fun ActivateScreen(check: suspend (String) -> Boolean) {
             horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.width(390.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 LunaWordmark(72.sp, 12.sp)
-                Row(Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0x295FD6DC)).padding(horizontal = 10.dp, vertical = 5.dp),
+                Row(Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0x298DB0FF)).padding(horizontal = 10.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     Icon(LockIcon, BrandGlow, 14.dp)
                     Text("INVITE ONLY", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, color = BrandGlow)
@@ -497,7 +497,7 @@ fun ActivateScreen(check: suspend (String) -> Boolean) {
                             withStyle(androidx.compose.ui.text.SpanStyle(color = Color.White, fontWeight = FontWeight.SemiBold)) { append("Element X") }
                             append(" app.")
                         },
-                        fontSize = 12.sp, lineHeight = 18.sp, color = Color(0xE6EFFBFC),
+                        fontSize = 12.sp, lineHeight = 18.sp, color = Color(0xE6EEF3FF),
                     )
                 }
             }

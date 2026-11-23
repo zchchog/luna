@@ -91,7 +91,7 @@ fun LiveGuideScreen(vm: LiveViewModel, nav: @Composable () -> Unit, onFullScreen
         // Closed: a small tab at the left edge with an arrow, showing the categories are there (press Left to open).
         AnimatedVisibility(!state.railOpen, modifier = Modifier.align(Alignment.CenterStart).padding(top = 58.dp), // centred on the categories panel (top 58dp to the bottom)
              enter = fadeIn(tween(220)), exit = fadeOut(tween(120))) {
-            Box(Modifier.size(14.dp, 52.dp).clip(RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp)).background(Color(0x2EEFFBFC)),
+            Box(Modifier.size(14.dp, 52.dp).clip(RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp)).background(Color(0x2EEEF3FF)),
                 contentAlignment = Alignment.Center) {
                 Chevron(left = false)
             }
@@ -99,7 +99,7 @@ fun LiveGuideScreen(vm: LiveViewModel, nav: @Composable () -> Unit, onFullScreen
         // Open: the same tab on the categories' edge, arrow pointing back, showing Left/Back puts them away.
         AnimatedVisibility(state.railOpen, modifier = Modifier.align(Alignment.CenterStart).padding(top = 58.dp, start = RAIL_WIDTH),
             enter = fadeIn(tween(260, delayMillis = 160)), exit = fadeOut(tween(100))) {
-            Box(Modifier.size(14.dp, 52.dp).clip(RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp)).background(Color(0x2EEFFBFC)),
+            Box(Modifier.size(14.dp, 52.dp).clip(RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp)).background(Color(0x2EEEF3FF)),
                 contentAlignment = Alignment.Center) {
                 Chevron(left = true)
             }

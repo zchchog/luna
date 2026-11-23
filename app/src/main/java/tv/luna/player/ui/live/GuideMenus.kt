@@ -23,6 +23,7 @@ internal sealed interface GuideMenu {
     data class CancelRecording(val ch: ChannelEntity, val p: tv.luna.player.data.repo.GuideProgramme) : GuideMenu
     data class Category(val cat: CategoryEntity) : GuideMenu
     /** Where recordings go: asked the first time, or to change it. [then]: what to do after (null = just set it). */
+    data class StopSeries(val rule: tv.luna.player.recording.SeriesRuleEntity) : GuideMenu
     data class RecordWhere(val ch: ChannelEntity, val then: RecordNext?, val p: tv.luna.player.data.repo.GuideProgramme? = null) : GuideMenu
     data class RemindLater(val ch: ChannelEntity) : GuideMenu
     /** Hold OK on a programme: Play, Record, Remind. */
@@ -49,6 +50,19 @@ fun GuideMenus(vm: LiveViewModel, state: GuideState, onFullScreen: (ChannelEntit
     val recordPlace by vm.recordPlace.collectAsState()
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
+    // The first Record press just works: it turns recording on and saves to this box. Another place (USB drive, network share) is
+    // chosen later in Settings › Playback › Recording, or from a channel's More… menu.
+    fun recordHere(ch: tv.luna.player.data.db.ChannelEntity, then: RecordNext, p: tv.luna.player.data.repo.GuideProgramme?) {
+        scope.launch {
+            vm.setRecordPlace(tv.luna.player.recording.RecStorage.INTERNAL)
+            when (then) {
+                RecordNext.NOW -> vm.recordNow(ch)
+                RecordNext.LATER -> { state.menu = GuideMenu.RecordLater(ch); return@launch }
+                RecordNext.PROGRAMME -> p?.let { vm.schedule(ch, it) }
+            }
+            state.menu = null
+        }
+    }
     when (m) {
         // Hold OK on a channel's name: just the everyday three, the rest one step down.
         is GuideMenu.Channel -> ContextMenu(m.ch.displayName(strip), buildList {
@@ -67,17 +81,28 @@ fun GuideMenus(vm: LiveViewModel, state: GuideState, onFullScreen: (ChannelEntit
             val live = m.p.start <= now && now < m.p.stop
             val recorded = (m.ch.id to m.p.start) in marks || (live && m.ch.id in recordingOnChannel)
             val reminded = (m.ch.id to m.p.start) in reminderMarks
-            ContextMenu(m.p.title, buildList {
+            val rules by vm.seriesRules.collectAsState()
+            val rule = rules.firstOrNull { it.channelId == m.ch.id && it.title.equals(m.p.title, ignoreCase = true) }
+            ContextMenu(progTitle(m.ch.displayName(strip), m.p), buildList {
                 add((if (live) "Play" else "Watch this channel") to { state.menu = null; onFullScreen(m.ch) })
-                if (m.p.stop > now) add((if (recorded) "Cancel recording" else "Record") to {
-                    when {
-                        recorded && live -> { recordingOnChannel[m.ch.id]?.let(vm::stopRecording); state.menu = null }
-                        recorded -> { vm.cancelRecording(m.ch, m.p); state.menu = null }
-                        !recordingOn -> state.menu = GuideMenu.RecordWhere(m.ch, if (live) RecordNext.NOW else RecordNext.PROGRAMME, m.p)
-                        live -> { vm.recordNow(m.ch); state.menu = null }
-                        else -> { vm.schedule(m.ch, m.p); state.menu = null }
-                    }
-                })
+                if (m.p.stop > now) {
+                    add((if (recorded) (if (live) "Stop recording this episode" else "Cancel this episode") else "Record episode") to {
+                        when {
+                            recorded && live -> { recordingOnChannel[m.ch.id]?.let(vm::stopRecording); state.menu = null }
+                            recorded -> { vm.cancelRecording(m.ch, m.p); state.menu = null }
+                            !recordingOn -> recordHere(m.ch, if (live) RecordNext.NOW else RecordNext.PROGRAMME, m.p)
+                            live -> { vm.recordNow(m.ch); state.menu = null }
+                            else -> { vm.schedule(m.ch, m.p); state.menu = null }
+                        }
+                    })
+                    // A series rule keeps scheduling every new showing of this title on this channel until it is stopped.
+                    if (rule != null) add("Stop recording the series" to { state.menu = GuideMenu.StopSeries(rule) })
+                    else add("Record series" to {
+                        if (recordingOn) vm.recordSeries(m.ch, m.p)
+                        else scope.launch { vm.setRecordPlace(tv.luna.player.recording.RecStorage.INTERNAL); vm.recordSeries(m.ch, m.p) }
+                        state.menu = null
+                    })
+                }
                 if (!live && m.p.start > now) add((if (reminded) "Cancel reminder" else "Remind me") to {
                     if (reminded) vm.cancelReminder(m.ch, m.p) else {
                         val activity = context as? android.app.Activity
@@ -91,8 +116,13 @@ fun GuideMenus(vm: LiveViewModel, state: GuideState, onFullScreen: (ChannelEntit
                 })
             }) { state.menu = null }
         }
+        is GuideMenu.StopSeries -> ContextMenu("Stop recording ${m.rule.title}?\n${m.rule.channelName}", listOf(
+            "Stop the series, keep what's recorded" to { vm.stopSeries(m.rule.id, false); state.menu = null },
+            "Stop the series and delete its recordings" to { vm.stopSeries(m.rule.id, true); state.menu = null },
+            "Keep recording the series" to { state.menu = null },
+        )) { state.menu = null }
         is GuideMenu.ChannelMore -> ContextMenu(m.ch.displayName(strip), buildList {
-            add("Record a later programme…" to { state.menu = if (recordingOn) GuideMenu.RecordLater(m.ch) else GuideMenu.RecordWhere(m.ch, RecordNext.LATER) })
+            add("Record a later programme…" to { if (recordingOn) state.menu = GuideMenu.RecordLater(m.ch) else recordHere(m.ch, RecordNext.LATER, null) })
             add("Remind me about a programme…" to { state.menu = GuideMenu.RemindLater(m.ch) })
             if (recordingOn) add("Recordings save to $recordPlace (change)…" to { state.menu = GuideMenu.RecordWhere(m.ch, null) })
             add("Add to category…" to { state.menu = GuideMenu.AddTo(m.ch) })
@@ -138,7 +168,7 @@ fun GuideMenus(vm: LiveViewModel, state: GuideState, onFullScreen: (ChannelEntit
                     }
                 }
             }
-            ContextMenu("Where should recordings go?", buildList {
+            ContextMenu(m.p?.let { "Record ${it.title}\nWhere should it be saved?" } ?: "Where should recordings go?", buildList {
                 add("This box (about 2 hours of HD)" to { pick(tv.luna.player.recording.RecStorage.INTERNAL) })
                 if (drives.isEmpty()) add("USB drive: plug one in first" to { })
                 drives.forEach { (name, path) -> add("USB drive: $name" to { pick(tv.luna.player.recording.RecStorage.USB, path) }) }
@@ -162,7 +192,7 @@ fun GuideMenus(vm: LiveViewModel, state: GuideState, onFullScreen: (ChannelEntit
                     }
                 }) { state.menu = null }
         }
-        is GuideMenu.CancelRecording -> ContextMenu(m.p.title, listOf(
+        is GuideMenu.CancelRecording -> ContextMenu(progTitle(m.ch.displayName(strip), m.p), listOf(
             (if (m.p.start <= System.currentTimeMillis()) "Stop recording" else "Cancel recording") to { vm.cancelRecording(m.ch, m.p); state.menu = null },
             "Keep it" to { state.menu = null },
         )) { state.menu = null }
@@ -175,3 +205,7 @@ fun GuideMenus(vm: LiveViewModel, state: GuideState, onFullScreen: (ChannelEntit
         )) { state.menu = null }
     }
 }
+
+/** The heading of a programme's menu: its title, then the channel and start time, so it is clear what is being recorded or reminded. */
+private fun progTitle(channel: String, p: tv.luna.player.data.repo.GuideProgramme) =
+    "${p.title}\n$channel · ${tv.luna.player.ui.clockTime(p.start)}"

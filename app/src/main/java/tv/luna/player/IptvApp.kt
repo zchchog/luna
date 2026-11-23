@@ -20,6 +20,7 @@ class IptvApp : Application() {
             // A fresh process runs no recording: alarms are set again (boot and updates clear them) and cut-off rows closed.
             runCatching { container.recordingScheduler.rearm { container.recordings.running.value.keys } }
                 .onFailure { android.util.Log.e("IptvApp", "Setting recording alarms failed", it) }
+            runCatching { container.recordings.applySeries() }.onFailure { android.util.Log.e("IptvApp", "Series rules failed", it) }
             runCatching { container.reminders.rearm() }.onFailure { android.util.Log.e("IptvApp", "Setting reminder alarms failed", it) }
         }
     }

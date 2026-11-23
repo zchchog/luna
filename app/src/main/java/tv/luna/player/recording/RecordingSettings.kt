@@ -51,6 +51,9 @@ fun RecordingPage(vm: SettingsViewModel, modifier: Modifier, first: FocusRequest
     var confirmOff by remember { mutableStateOf(false) }
     var test by remember { mutableStateOf<String?>(null) }
     var free by remember { mutableStateOf<Long?>(null) }
+    var picking by remember { mutableStateOf(false) }
+    var smbSetup by remember { mutableStateOf(false) }
+    var askDefault by remember { mutableStateOf<Pending?>(null) }
     val drives = remember(s.recordTo) { usbDirs(context) }
     LaunchedEffect(Unit) { withFrameNanos { }; runCatching { first.requestFocus() } }
     LaunchedEffect(s.recordingOn, s.recordTo, s.recordUsbPath, s.smbServer, s.smbShare, s.smbFolder, s.smbUser, s.smbPassword) {
@@ -64,16 +67,24 @@ fun RecordingPage(vm: SettingsViewModel, modifier: Modifier, first: FocusRequest
             if (on) info = true else confirmOff = true
         }
         if (!s.recordingOn) return@Column
-        val usbLabel = if (drives.isEmpty()) "USB drive (none found)" else "USB drive"
-        ChoiceRow("Save to", "Where new recordings go", RecStorage.entries, s.recordTo,
-            { when (it) { RecStorage.INTERNAL -> "Internal storage"; RecStorage.USB -> usbLabel; RecStorage.SMB -> "Network share" } }) { to ->
-            if (to == RecStorage.USB && drives.isEmpty()) vm.notice("Plug in a USB drive first") else vm.update { it.copy(recordTo = to) }
+        // The box running the app is the everyday place. External storage (a USB drive or a network share) is set up once,
+        // and the app then asks whether it should become the default.
+        val usbOk = !s.recordUsbPath.isNullOrBlank() && drives.any { it.path == s.recordUsbPath }
+        val shareOk = s.smbServer.isNotBlank() && s.smbShare.isNotBlank()
+        val extKind = when { s.recordTo != RecStorage.INTERNAL -> s.recordTo; usbOk -> RecStorage.USB; shareOk -> RecStorage.SMB; else -> null }
+        val extName = when (extKind) {
+            RecStorage.USB -> "USB drive: " + (drives.firstOrNull { it.path == s.recordUsbPath }?.let { driveName(context, it) } ?: "not plugged in")
+            RecStorage.SMB -> "Network share: ${s.smbServer}/${s.smbShare}"
+            else -> null
         }
-        if (s.recordTo == RecStorage.USB && drives.size > 1) {
-            val current = drives.firstOrNull { it.path == s.recordUsbPath } ?: drives.first()
-            ChoiceRow("USB drive", "Which drive recordings go to", drives, current, { driveName(context, it) }) { d -> vm.update { it.copy(recordUsbPath = d.path) } }
+        SettingRow("This box", "Saves on the box the app is running on", if (s.recordTo == RecStorage.INTERNAL) "In use" else "") {
+            vm.update { it.copy(recordTo = RecStorage.INTERNAL) }
         }
-        if (s.recordTo == RecStorage.SMB) {
+        if (extKind != null && extName != null) SettingRow(extName, "Your external storage", if (s.recordTo != RecStorage.INTERNAL) "In use" else "") {
+            if (extKind == RecStorage.USB && !usbOk) vm.notice("Plug the USB drive back in first") else vm.update { it.copy(recordTo = extKind) }
+        }
+        SettingRow(if (extKind == null) "Set up external storage" else "Change external storage", "A USB drive or a network share (NAS)", "") { picking = true }
+        if (smbSetup || s.recordTo == RecStorage.SMB) {
             EditRow("Server", "Name or address, e.g. nas or 192.168.1.20", s.smbServer.ifEmpty { "Not set" }, s.smbServer, keyboard = KeyboardType.Uri) { v -> vm.update { it.copy(smbServer = v) } }
             EditRow("Share", "The shared folder's name on the server", s.smbShare.ifEmpty { "Not set" }, s.smbShare) { v -> vm.update { it.copy(smbShare = v) } }
             EditRow("Folder", "Inside the share; empty = the top", s.smbFolder.ifEmpty { "Top of the share" }, s.smbFolder) { v -> vm.update { it.copy(smbFolder = v) } }
@@ -82,7 +93,11 @@ fun RecordingPage(vm: SettingsViewModel, modifier: Modifier, first: FocusRequest
                 keyboard = KeyboardType.Password, secret = true) { v -> vm.update { it.copy(smbPassword = v) } }
             SettingRow("Test", "Writes and removes a small file", test) {
                 test = "Testing…"
-                scope.launch { test = vm.testShare(s)?.let { "Failed: $it" } ?: "OK" }
+                scope.launch {
+                    val err = vm.testShare(s)
+                    test = err?.let { "Failed: $it" } ?: "OK"
+                    if (err == null && s.recordTo != RecStorage.SMB) askDefault = Pending(RecStorage.SMB, "the network share")
+                }
             }
         }
         SettingRow("Free space", "Where recordings are saved", free?.let(::freeSpaceText) ?: "…") {}
@@ -95,6 +110,29 @@ fun RecordingPage(vm: SettingsViewModel, modifier: Modifier, first: FocusRequest
         }
     }
 
+    if (picking) MenuFrame("Set up external storage", onDismiss = { picking = false }) { f ->
+        drives.forEachIndexed { i, dir ->
+            val name = driveName(context, dir)
+            MenuItem("USB drive: $name", if (i == 0) Modifier.focusRequester(f) else Modifier) {
+                picking = false
+                scope.launch {
+                    val err = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { testFolder(dir) }
+                    if (err != null) vm.notice("Couldn't save to that drive: $err")
+                    else { vm.update { it.copy(recordUsbPath = dir.path) }; askDefault = Pending(RecStorage.USB, name) }
+                }
+            }
+        }
+        if (drives.isEmpty()) MenuItem("USB drive: plug one in first", Modifier.focusRequester(f)) { }
+        MenuItem("Network share (NAS)…", Modifier) { picking = false; smbSetup = true }
+        MenuItem("Cancel", Modifier) { picking = false }
+    }
+    askDefault?.let { d ->
+        MenuFrame("Record to ${d.name} by default?", onDismiss = { askDefault = null }) { f ->
+            Text("It's ready to use. You can switch back to this box at any time here.", fontSize = 14.sp, color = Color.White, modifier = Modifier.padding(bottom = 10.dp))
+            MenuItem("Yes, use it by default", Modifier.focusRequester(f)) { askDefault = null; vm.update { it.copy(recordTo = d.kind) } }
+            MenuItem("No, keep using this box", Modifier) { askDefault = null; vm.update { it.copy(recordTo = RecStorage.INTERNAL) } }
+        }
+    }
     if (info) MenuFrame("Before you record", onDismiss = { info = false }) { f ->
         Text(RECORDING_INFO, fontSize = 14.sp, color = Color.White, modifier = Modifier.padding(bottom = 10.dp))
         MenuItem("OK", Modifier.focusRequester(f)) { info = false; vm.update { it.copy(recordingOn = true) } }
@@ -111,3 +149,5 @@ fun RecordingPage(vm: SettingsViewModel, modifier: Modifier, first: FocusRequest
 /** A drive's name as Android shows it ("SanDisk", "USB drive"), from the volume holding [dir]. */
 private fun driveName(context: android.content.Context, dir: java.io.File): String =
     context.getSystemService(android.os.storage.StorageManager::class.java).getStorageVolume(dir)?.getDescription(context) ?: dir.path
+
+private class Pending(val kind: RecStorage, val name: String)

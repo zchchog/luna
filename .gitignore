@@ -12,7 +12,8 @@ keystore.properties
 # Private notes, references and mockups: never committed
 private/
 
-# Claude Code personal settings
-.claude/settings.local.json
 build-log.txt
 test-run/
+
+# Screenshots taken while testing
+screenshots/

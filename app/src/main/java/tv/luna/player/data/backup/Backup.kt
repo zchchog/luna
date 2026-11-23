@@ -10,8 +10,6 @@ import tv.luna.player.data.settings.AppSettings
 import tv.luna.player.data.settings.AudioDecoder
 import tv.luna.player.data.settings.GuideKind
 import tv.luna.player.data.settings.LogoKind
-import tv.luna.player.data.settings.ThemeColour
-import tv.luna.player.data.settings.themeIdOf
 
 const val BACKUP_VERSION = 1
 
@@ -53,8 +51,6 @@ data class BFavourite(val kind: String, val remoteId: String)
 /** [AppSettings] minus lastLiveChannelId (a row id, meaningless after restore). */
 @Serializable
 data class BSettings(
-    val theme: String = AppSettings().theme.name,
-    val themeColour: String = AppSettings().themeColour.name,
     val autoplayOnScroll: Boolean = AppSettings().autoplayOnScroll,
     val audioDecoder: String = AppSettings().audioDecoder.name,
     val confirmExit: Boolean = AppSettings().confirmExit,
@@ -86,8 +82,6 @@ data class BSettings(
     fun toAppSettings(lastLiveChannelId: Long?): AppSettings {
         val d = AppSettings()
         return AppSettings(
-            theme = themeIdOf(theme),
-            themeColour = ThemeColour.entries.find { it.name == themeColour } ?: d.themeColour,
             autoplayOnScroll = autoplayOnScroll,
             audioDecoder = AudioDecoder.entries.find { it.name == audioDecoder } ?: d.audioDecoder,
             confirmExit = confirmExit,
@@ -118,7 +112,7 @@ data class BSettings(
 
     companion object {
         fun of(s: AppSettings) = BSettings(
-            s.theme.name, s.themeColour.name, s.autoplayOnScroll, s.audioDecoder.name, s.confirmExit,
+            s.autoplayOnScroll, s.audioDecoder.name, s.confirmExit,
             s.startOnBoot, s.epgUpdateIntervalHours, s.epgUpdateOnStart, s.epgUpdateOnPlaylistChange, s.epgDaysToKeep,
             s.epgPastDays, s.matchTvLanguage, s.logoOrder.map { it.name }, s.guideOrder.map { it.name },
             s.borrowSiblingGuide, s.hideHeaderChannels, s.showDateTime, s.showPing, s.subtitlesOn, s.subtitleLanguage,

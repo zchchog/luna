@@ -45,3 +45,10 @@ fun freeSpaceText(bytes: Long?): String {
 
 /** A recording's file (path or smb://), as opposed to a provider stream the player is showing. */
 fun isRecordingLocation(url: String) = url.startsWith("/") || url.startsWith("smb://")
+
+/** Writes and removes a small file in [dir]; null when that works, otherwise the reason it didn't. */
+fun testFolder(dir: File): String? = runCatching {
+    dir.mkdirs()
+    val f = File(dir, ".test")
+    f.writeText("ok"); check(f.delete()) { "couldn't remove the test file" }
+}.exceptionOrNull()?.let { it.message ?: "not writable" }

@@ -361,7 +361,10 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
     val recordingOn: StateFlow<Boolean> = c.settings.settings.map { it.recordingOn }.distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
     /** (channelId, programme start) of scheduled/recording programmes: the guide's dot and the menu's mark. */
-    val marks: StateFlow<Set<Pair<Long, Long>>> = c.recordings.marks().stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+    val marks: StateFlow<Map<Pair<Long, Long>, Boolean>> = c.recordings.marks().stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+    val seriesRules: StateFlow<List<tv.luna.player.recording.SeriesRuleEntity>> = c.recordings.rules().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    fun recordSeries(ch: ChannelEntity, p: GuideProgramme) { viewModelScope.launch { c.recordings.recordSeries(ch, ch.displayName(strip.value), p) } }
+    fun stopSeries(id: Long, deleteRecorded: Boolean) { viewModelScope.launch { c.recordings.stopSeries(id, deleteRecorded, c::deleteRecordingFile) } }
     /** Channel id → the recording running on it. */
     val recordingOnChannel: StateFlow<Map<Long, Long>> = c.recordings.running
         .map { m -> m.values.mapNotNull { r -> r.channelId?.let { it to r.id } }.toMap() }

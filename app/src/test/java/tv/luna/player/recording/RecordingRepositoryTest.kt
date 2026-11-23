@@ -46,7 +46,7 @@ class RecordingRepositoryTest {
         limitOf = { if (limitHangs) kotlinx.coroutines.awaitCancellation() else limit }, storedLimit = { limit },
         activeProviderId = { activeProvider },
         startService = { if (startFails) throw IllegalStateException("not allowed"); started += it }, stopService = { stopped += it }, stopPlayer = { playerStops++ },
-        watching = { watching }, scope = this, now = { now },
+        watching = { watching }, showings = { emptyList() }, scope = this, now = { now },
     )
 
     private suspend fun channel(): ChannelEntity {

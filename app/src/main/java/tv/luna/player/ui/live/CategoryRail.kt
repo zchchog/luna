@@ -85,7 +85,7 @@ internal fun Rail(
             // A faint line down its right side, fading out at both ends, so it reads as its own panel.
             .drawBehind {
                 val w = 1.dp.toPx()
-                drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Transparent, .15f to Color(0x33EFFBFC), .8f to Color(0x33EFFBFC), 1f to Color.Transparent),
+                drawRect(androidx.compose.ui.graphics.Brush.verticalGradient(0f to Color.Transparent, .15f to Color(0x33EEF3FF), .8f to Color(0x33EEF3FF), 1f to Color.Transparent),
                     topLeft = androidx.compose.ui.geometry.Offset(size.width - w, 0f), size = androidx.compose.ui.geometry.Size(w, size.height))
             }
             .padding(top = 4.dp) // no bottom padding: the list runs to the screen's bottom edge
@@ -106,7 +106,7 @@ internal fun Rail(
             },
     ) {
         Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 14.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("CATEGORIES", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF5FD6DC), letterSpacing = 2.sp,
+            Text("CATEGORIES", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF8DB0FF), letterSpacing = 2.sp,
                 modifier = Modifier.weight(1f))
         }
         if (move != null) Text("Up/Down move · OK drop · Back cancel", fontSize = 11.sp, color = LocalTheme.current.colors.muted,
@@ -133,9 +133,9 @@ internal fun Rail(
                     Row(
                         Modifier.fillMaxWidth().height(40.dp)
                             .graphicsLayer { val sc = if (f) 1.025f else 1f; scaleX = sc; scaleY = sc }
-                            .then(if (f) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = Color(0xFFB5F1F4), spotColor = Color(0xFFB5F1F4)) else Modifier)
+                            .then(if (f) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = Color(0xFFA0BEFF), spotColor = Color(0xFFA0BEFF)) else Modifier)
                             .background(
-                                if (isMoving) Color(0xFFE5A00D) else if (f) colors.focus else colors.cell,
+                                if (isMoving) Color(0xFF8DB0FF) else if (f) colors.focus else colors.cell,
                                 RoundedCornerShape(5.dp),
                             )
                             // The category being shown has a light edge, so it can be found again.

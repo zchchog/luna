@@ -39,6 +39,18 @@ data class RecordingEntity(
     val positionMs: Long = 0,
     /** "Keep watching" was picked at the 1-minute warning. */
     val skipAsked: Boolean = false,
+    /** The series rule that scheduled this one (null: a single episode). */
+    @androidx.room.ColumnInfo(defaultValue = "NULL") val seriesId: Long? = null,
+)
+
+/** "Record series": every showing of [title] on [channelId] is scheduled as the guide lists it, until the rule is stopped. */
+@Entity(tableName = "series_rule", indices = [Index("channelId")])
+data class SeriesRuleEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val providerId: Long,
+    val channelId: Long,
+    val channelName: String,
+    val title: String,
 )
 
 @Dao
@@ -56,6 +68,12 @@ interface RecordingDao {
     @Query("SELECT * FROM recording WHERE status IN (:s)") suspend fun withStatus(vararg s: RecStatus): List<RecordingEntity>
     @Query("SELECT * FROM recording WHERE channelId = :channelId AND status IN (:statuses) ORDER BY scheduledStart")
     suspend fun onChannel(channelId: Long, statuses: List<RecStatus>): List<RecordingEntity>
+    @Insert suspend fun insertRule(r: SeriesRuleEntity): Long
+    @Query("SELECT * FROM series_rule") suspend fun rules(): List<SeriesRuleEntity>
+    @Query("SELECT * FROM series_rule") fun observeRules(): Flow<List<SeriesRuleEntity>>
+    @Query("DELETE FROM series_rule WHERE id = :id") suspend fun deleteRule(id: Long)
+    @Query("SELECT * FROM recording WHERE seriesId = :id") suspend fun inSeries(id: Long): List<RecordingEntity>
+    @Query("SELECT COUNT(*) FROM recording WHERE channelId = :channelId AND programmeStart = :start") suspend fun countProgramme(channelId: Long, start: Long): Int
     @Query("UPDATE recording SET positionMs = :ms WHERE id = :id") suspend fun setPosition(id: Long, ms: Long)
     @Query("UPDATE recording SET bytes = :bytes WHERE id = :id") suspend fun setBytes(id: Long, bytes: Long)
 }

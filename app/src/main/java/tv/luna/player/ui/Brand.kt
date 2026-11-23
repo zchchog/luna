@@ -41,13 +41,13 @@ import kotlinx.coroutines.launch
 import tv.luna.player.R
 import tv.luna.player.ui.theme.LocalTheme
 
-/** Luna's brand pieces: the Montserrat name, the glossy "LUNA" wordmark, the teal moon-glow background, the opening screen. */
+/** Luna's brand pieces: the Montserrat name, the glossy "LUNA" wordmark, the blue moon-glow background, the opening screen. */
 val Montserrat = FontFamily(Font(R.font.montserrat_semibold, FontWeight.SemiBold))
 
-val BrandGlow = Color(0xFFB5F1F4)
-private val MoonTeal = Color(0xFF8FE3E6)
+val BrandGlow = Color(0xFFA0BEFF)
+private val MoonTeal = Color(0xFF9CB8FF)
 private val Shine = Brush.verticalGradient(
-    0f to Color.White, .46f to Color(0xFFE9FBFC), .54f to Color(0xFFA9E3E8), 1f to Color(0xFFE3F8FA),
+    0f to Color.White, .46f to Color(0xFFE8EEFF), .54f to Color(0xFFB0C4F5), 1f to Color(0xFFE3EBFF),
 )
 
 /** "LUNA" in glossy white Montserrat, like the TV banner. */
@@ -63,7 +63,7 @@ fun LunaWordmark(size: TextUnit, spacing: TextUnit, modifier: Modifier = Modifie
 }
 
 /**
- * The teal gradient with the moon rising from below (two see-through circles, as on the banner and icon) and a soft
+ * The blue gradient with the moon rising from below (two see-through circles, as on the banner and icon) and a soft
  * diagonal shine. [glowX]/[glowY] place the moon's centre as fractions of the screen; [glowR] is its radius as a fraction
  * of the height.
  */
@@ -120,7 +120,7 @@ fun LunaSplash(onDone: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(0, 200, 400).forEach { d ->
                         val a by pulse.animateFloat(.25f, 1f, infiniteRepeatable(tween(600, delayMillis = d), RepeatMode.Reverse), label = "dot$d")
-                        Box(Modifier.size(8.dp).graphicsLayer { alpha = a * word.value }.background(Color(0xFFEFFBFC), CircleShape))
+                        Box(Modifier.size(8.dp).graphicsLayer { alpha = a * word.value }.background(Color(0xFFEEF3FF), CircleShape))
                     }
                 }
             }

@@ -29,14 +29,30 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.remember
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.tv.material3.Text
 
-/** A small D-pad menu in a dialog; Back dismisses it. Picking an item does not dismiss by itself. */
+/**
+ * A small D-pad menu in the middle of the screen over a dimmed guide; Back dismisses it. Picking an item does not dismiss by itself.
+ */
 @Composable
 fun ContextMenu(title: String, items: List<Pair<String, () -> Unit>>, onDismiss: () -> Unit) {
     MenuFrame(title, onDismiss) { first ->
@@ -66,28 +82,36 @@ internal fun MenuFrame(title: String, onDismiss: () -> Unit, content: @Composabl
     // A long OK opens this menu while the button is still down: its repeats and release must not pick an item.
     // OK counts only from the first fresh press after opening.
     var armed by remember { mutableStateOf(false) }
-    Dialog(onDismissRequest = onDismiss) {
+    val body = @Composable {
         Column(
             Modifier.onPreviewKeyEvent { e ->
                 if (armed || e.key !in OK_KEYS) return@onPreviewKeyEvent false
                 if (e.type == KeyEventType.KeyDown && e.nativeKeyEvent.repeatCount == 0) { armed = true; false } else true
-            }.width(420.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xF2072A31))
-                .border(1.dp, Color(0x29FFFFFF), RoundedCornerShape(18.dp)).padding(20.dp)
+            }.width(MENU_WIDTH).clip(RoundedCornerShape(16.dp)).background(PanelBrush)
+                .border(1.dp, PANEL_EDGE, RoundedCornerShape(16.dp)).padding(20.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = LocalTheme.current.colors.muted, maxLines = 2,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(bottom = 10.dp))
+            Text(title, fontSize = 17.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 3,
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp, bottom = 12.dp))
             content(first)
         }
     }
+    Dialog(onDismissRequest = onDismiss) { body() }
 }
+
+private val MENU_WIDTH = 420.dp
+private val PANEL_TOP = Color(0xFA1E3FAB)
+private val PANEL_BOTTOM = Color(0xFA16308F)
+private val PANEL_EDGE = Color(0x59A9C1FF)
+/** The blue panel every menu and dropdown sits on, deep enough to stand out from the blue background. */
+internal val PanelBrush = Brush.verticalGradient(listOf(PANEL_TOP, PANEL_BOTTOM))
 
 @Composable
 internal fun MenuItem(label: String, modifier: Modifier, onClick: () -> Unit) {
     FocusBox(onClick = onClick, modifier = modifier) { f ->
-        Text(label, fontSize = 16.sp, color = if (f) Color.Black else Color.White,
+        Text(label, fontSize = 15.sp, color = if (f) Color(0xFF0A1753) else Color.White,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(if (f) Color.White else Color.Transparent)
-                .padding(horizontal = 14.dp, vertical = 10.dp))
+                .padding(horizontal = 14.dp, vertical = 9.dp))
     }
 }

@@ -60,6 +60,8 @@ class EpgRefreshWorker(context: Context, params: WorkerParameters) : CoroutineWo
             val m = c.epgMatcher.rematch(p.id, mode)
             Log.i(EpgImporter.TAG, "Provider ${p.id}: ${m.matched} matched (${m.borrowed} borrowed), ${m.unmatched} unmatched")
         }
+        // New showings may have arrived for a series being recorded.
+        runCatching { c.recordings.applySeries() }
         return if (shouldRetry(attempted, failed)) Result.retry() else Result.success()
     }
 

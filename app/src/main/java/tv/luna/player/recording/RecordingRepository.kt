@@ -35,6 +35,8 @@ class RecordingRepository(
     private val stopPlayer: () -> Unit,
     /** The player is showing a provider stream (not a recording). */
     private val watching: () -> Boolean,
+    /** A channel's programmes for the coming week, for series rules. */
+    private val showings: suspend (ChannelEntity) -> List<GuideProgramme>,
     private val scope: CoroutineScope,
     private val now: () -> Long = System::currentTimeMillis,
 ) {
@@ -47,11 +49,13 @@ class RecordingRepository(
 
     fun observe(): Flow<List<RecordingEntity>> = dao.observeAll()
 
-    /** (channelId, programmeStart) of programmes scheduled or recording: the guide's red dot and the menus' mark. */
-    fun marks(): Flow<Set<Pair<Long, Long>>> = dao.observeAll().map { l ->
+    /** (channelId, programmeStart) of programmes scheduled or recording, true when a series rule scheduled it: the guide's REC badge and the menus' mark. */
+    fun marks(): Flow<Map<Pair<Long, Long>, Boolean>> = dao.observeAll().map { l ->
         l.filter { it.status == RecStatus.SCHEDULED || it.status == RecStatus.RECORDING }
-            .mapNotNullTo(HashSet()) { r -> r.channelId?.let { c -> r.programmeStart?.let { c to it } } }
+            .mapNotNull { r -> r.channelId?.let { c -> r.programmeStart?.let { (c to it) to (r.seriesId != null) } } }.toMap()
     }
+
+    fun rules(): Flow<List<SeriesRuleEntity>> = dao.observeRules()
 
     private fun row(ch: ChannelEntity, name: String, s: AppSettings, title: String, desc: String?, start: Long, end: Long, programmeStart: Long?) =
         RecordingEntity(providerId = ch.providerId, channelId = ch.id, channelName = name, channelLogo = shownLogo(ch, s.logoOrder),
@@ -73,17 +77,57 @@ class RecordingRepository(
         }
     }
 
-    suspend fun schedule(ch: ChannelEntity, displayName: String, p: GuideProgramme) {
+    suspend fun schedule(ch: ChannelEntity, displayName: String, p: GuideProgramme, seriesId: Long? = null, quiet: Boolean = false) {
         val s = settings()
         val new = row(ch, displayName, s, p.title, p.desc, maxOf(p.start - s.startEarlyMin * MIN, now()), p.stop + s.endLateMin * MIN, p.start)
+            .copy(seriesId = seriesId)
         val (r, changed) = trimBackToBack(new, dao.onChannel(ch.id, listOf(RecStatus.SCHEDULED, RecStatus.RECORDING)))
         changed.forEach { dao.update(it) }
         arm(r.copy(id = dao.insert(r)))
-        prompt.value = Prompt.Notice("Scheduled ${p.title}, ${dayDate(p.start)} ${clockTime(p.start)}")
+        if (!quiet) prompt.value = Prompt.Notice("Scheduled ${p.title}, ${dayDate(p.start)} ${clockTime(p.start)}")
+    }
+
+    /** "Record series": from now on every showing of [p]'s title on this channel is scheduled, until the rule is stopped. */
+    suspend fun recordSeries(ch: ChannelEntity, displayName: String, p: GuideProgramme) {
+        if (dao.rules().none { it.channelId == ch.id && it.title.equals(p.title, ignoreCase = true) }) {
+            dao.insertRule(SeriesRuleEntity(providerId = ch.providerId, channelId = ch.id, channelName = displayName, title = p.title))
+        }
+        val n = applySeries()
+        prompt.value = Prompt.Notice("Recording the series ${p.title}" + if (n > 0) ": $n showing${if (n == 1) "" else "s"} scheduled" else "")
+    }
+
+    /** Schedules whatever each series rule's guide now lists and isn't scheduled, recorded or cancelled yet; how many. */
+    suspend fun applySeries(): Int {
+        val t = now()
+        var n = 0
+        for (rule in dao.rules()) {
+            val ch = db.channelDao().get(rule.channelId) ?: continue
+            for (p in showings(ch).filter { it.stop > t && it.title.equals(rule.title, ignoreCase = true) }) {
+                if (dao.countProgramme(ch.id, p.start) > 0) continue
+                schedule(ch, rule.channelName, p, seriesId = rule.id, quiet = true); n++
+            }
+        }
+        return n
+    }
+
+    /** Ends a series rule: its scheduled episodes go, a running one is stopped (and kept); [deleteRecorded] also removes the finished ones. */
+    suspend fun stopSeries(id: Long, deleteRecorded: Boolean, deleteFile: suspend (RecordingEntity) -> Unit) {
+        dao.deleteRule(id)
+        for (r in dao.inSeries(id)) when {
+            r.status == RecStatus.SCHEDULED || r.status == RecStatus.SKIPPED && r.statusReason == CANCELLED -> { disarm(r.id); dao.delete(r.id) }
+            r.status == RecStatus.RECORDING -> stop(r.id)
+            deleteRecorded -> delete(r.id, deleteFile)
+        }
     }
 
     /** A scheduled recording: forgotten (row and alarms). */
-    suspend fun cancel(id: Long) { disarm(id); dao.delete(id) }
+    suspend fun cancel(id: Long) {
+        val r = dao.get(id)
+        disarm(id)
+        // One episode of a running series: kept (hidden) so the rule doesn't schedule it again.
+        if (r?.seriesId != null && dao.rules().any { it.id == r.seriesId }) dao.update(r.copy(status = RecStatus.SKIPPED, statusReason = CANCELLED))
+        else dao.delete(id)
+    }
 
     /** A running recording: the service stops it and keeps what was saved. */
     fun stop(id: Long) = stopService(id)
@@ -186,3 +230,6 @@ class RecordingRepository(
         const val RELEASE_WAIT = 5_000L
     }
 }
+
+/** The reason on a series episode the viewer cancelled; such rows are hidden. */
+const val CANCELLED = "Cancelled"

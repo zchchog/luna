@@ -49,7 +49,7 @@ import tv.luna.player.ui.FocusBox
 
 enum class SettingsGroup(val title: String) {
     PLAYLISTS("Playlists"), CHANNELS("Channels & categories"), EPG("TV guide (EPG)"), PLAYBACK("Playback"),
-    APPEARANCE("Appearance"), BEHAVIOUR("App behaviour"), BACKUP("Backup & restore"), ABOUT("About"),
+    BEHAVIOUR("App behaviour"), BACKUP("Backup & restore"), ABOUT("About"),
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -122,8 +122,7 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
         Row(Modifier.fillMaxSize().padding(48.dp), horizontalArrangement = Arrangement.spacedBy(32.dp)) {
             Column(Modifier.width(260.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Settings", fontSize = 26.sp, fontFamily = tv.luna.player.ui.Montserrat, fontWeight = FontWeight.SemiBold, color = Color.White, modifier = Modifier.padding(bottom = 16.dp))
-                // Appearance is hidden: the app always uses the teal look (MainActivity).
-                SettingsGroup.entries.filter { it != SettingsGroup.APPEARANCE }.forEach { g ->
+                SettingsGroup.entries.forEach { g ->
                     FocusBox(
                         onClick = { runCatching { rowsFocus.requestFocus() } },
                         modifier = if (g == group) Modifier.focusRequester(groupFocus) else Modifier,
@@ -191,7 +190,6 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
                             }
                         }
                     }
-                    SettingsGroup.APPEARANCE -> AppearanceRows(s, first, onTheme = { t -> vm.update { it.copy(theme = t) } }, onColour = { c -> vm.update { it.copy(themeColour = c) } })
                     SettingsGroup.BEHAVIOUR -> {
                         SwitchRow("Confirm exit", "Press Back twice at the top menu to leave the app", s.confirmExit, first) { on ->
                             vm.update { it.copy(confirmExit = on) }
@@ -250,7 +248,7 @@ fun SwitchRow(title: String, explanation: String, checked: Boolean, modifier: Mo
 @Composable
 fun Toggle(on: Boolean, focused: Boolean) {
     val off = if (focused) Color(0xFFB0B0B0) else Color(0x40FFFFFF)
-    Box(Modifier.size(44.dp, 24.dp).clip(RoundedCornerShape(12.dp)).background(if (on) Color(0xFF1C9AA0) else off).padding(3.dp),
+    Box(Modifier.size(44.dp, 24.dp).clip(RoundedCornerShape(12.dp)).background(if (on) Color(0xFF3459CA) else off).padding(3.dp),
         contentAlignment = if (on) Alignment.CenterEnd else Alignment.CenterStart) {
         Box(Modifier.size(18.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White))
     }

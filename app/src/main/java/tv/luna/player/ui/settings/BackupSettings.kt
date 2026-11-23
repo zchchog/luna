@@ -19,7 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 import tv.luna.player.data.backup.Backup
-import tv.luna.player.data.settings.themeIdOf
 import tv.luna.player.ui.theme.LocalTheme
 
 /**
@@ -79,7 +78,7 @@ private fun RestoreForm(b: Backup, vm: SettingsViewModel, park: () -> Unit, onCa
     LaunchedEffect(step) { withFrameNanos { }; runCatching { firstRow.requestFocus() } }
 
     val names = b.playlists.joinToString { it.name }.ifEmpty { "none" }
-    Text("This backup: ${b.playlists.size} playlist(s) — $names · settings (theme ${themeIdOf(b.settings.theme).label})",
+    Text("This backup: ${b.playlists.size} playlist(s) — $names · settings",
         fontSize = 14.sp, color = LocalTheme.current.colors.muted, modifier = Modifier.padding(top = 8.dp))
     if (step < asks.size) {
         val i = asks[step]

@@ -136,6 +136,10 @@ class AppContainer(context: Context) {
             stopService = { tv.luna.player.recording.RecordingService.stop(appContext, it) },
             stopPlayer = { main.post { if (player.isInitialized()) playerManager.stop() } },
             watching = ::isWatching, scope = background,
+            showings = { ch ->
+                val t = System.currentTimeMillis()
+                tv.luna.player.data.repo.GuideRepository(db).programmes(ch.providerId, listOf(ch), t, t + 7 * 24 * 3_600_000L)[ch.id].orEmpty()
+            },
         )
     }
 

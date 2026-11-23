@@ -44,6 +44,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
 import androidx.tv.material3.Text
 import tv.luna.player.data.catalogue.displayName
 import tv.luna.player.data.db.ChannelEntity
@@ -76,7 +78,7 @@ data class GridStyle(
 
 /** Luna: mockup 01, 420px per half hour (1dp = 2px on a 1080p TV). */
 // 5.9dp/min: 195 + 5 + 120 × 5.9 = 908dp fits between the 24dp margins (the TV's overscan cut off a grid that ran to the edge).
-val GLASS_GRID = GridStyle(32.dp, 255.dp, 5.4.dp, 120, 4.dp, FontWeight.Medium, focusedProgramme = Color(0x8C76A3A6), roundedCells = true, textScale = 1.14f) // frosted glass
+val GLASS_GRID = GridStyle(32.dp, 255.dp, 5.4.dp, 120, 4.dp, FontWeight.Medium, focusedProgramme = Color(0x8C7891AA), roundedCells = true, textScale = 1.14f) // frosted glass
 
 private val PILL = RoundedCornerShape(5.dp)
 private val BOX = RoundedCornerShape(2.dp)
@@ -105,7 +107,7 @@ fun GuideGrid(
     Column(modifier) {
         Row(Modifier.height((25 * style.textScale).dp).drawBehind {
                 // A faint line under the times, fading out at both ends, like the one beside the categories.
-                drawRect(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to Color.Transparent, .12f to Color(0x33EFFBFC), .88f to Color(0x33EFFBFC), 1f to Color.Transparent),
+                drawRect(androidx.compose.ui.graphics.Brush.horizontalGradient(0f to Color.Transparent, .12f to Color(0x33EEF3FF), .88f to Color(0x33EEF3FF), 1f to Color.Transparent),
                     Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx()))
             },
             verticalAlignment = Alignment.Bottom) {
@@ -130,6 +132,7 @@ fun GuideGrid(
                         channelSelected = state.onChannel,
                         marked = { p -> (ch.id to p.start) in marks || ch.id in recordingOnChannel && p.start <= now && now < p.stop },
                         reminded = { p -> (ch.id to p.start) in reminderMarks },
+                        series = { p -> marks[ch.id to p.start] == true },
                         modifier = (if (i == state.focusIndex) Modifier.focusRequester(state.rowFocus) else Modifier)
                             .onPreviewKeyEvent { e ->
                                 if (state.railOpen) return@onPreviewKeyEvent true // rail is taking focus; don't move the guide behind it
@@ -172,6 +175,8 @@ private fun GuideRow(
     /** The highlight is on the channel names (the row with focus lights its name, not a programme). */
     channelSelected: Boolean = false,
     reminded: (GuideProgramme) -> Boolean = { false },
+    series: (GuideProgramme) -> Boolean = { false },
+    /** Told where the highlighted programme (or channel name) is on screen. */
 ) {
     val colors = LocalTheme.current.colors
     Row(Modifier.height(style.rowHeight).then(if (style.rowDividers) Modifier.drawBehind {
@@ -183,7 +188,7 @@ private fun GuideRow(
             Row(
                 Modifier.fillMaxSize()
                     .graphicsLayer { val s = if (f && !style.boxed) 1.03f else 1f; scaleX = s; scaleY = s }
-                    .then(if (f && !style.boxed) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = Color(0xFFB5F1F4), spotColor = Color(0xFFB5F1F4)) else Modifier)
+                    .then(if (f && !style.boxed) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = Color(0xFFA0BEFF), spotColor = Color(0xFFA0BEFF)) else Modifier)
                     .background(if (f) colors.focus else if (focusedRow) Color(0x40FFFFFF) else colors.cell, if (style.boxed) BOX else PILL)
                     .padding(horizontal = 11.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -206,7 +211,8 @@ private fun GuideRow(
             if (progs.none { it.stop > windowStart && it.start < end }) {
                 // Shaped and spaced like a programme cell of this style.
                 Box(Modifier.width(style.dpPerMin * style.windowMin - when { style.boxed -> 3.dp; style.roundedCells -> 2.dp; else -> 0.dp })
-                    .fillMaxHeight().background(colors.cellDim, when { style.boxed -> BOX; style.roundedCells -> CELL; else -> RectangleShape }),
+                    .fillMaxHeight()
+                    .background(colors.cellDim, when { style.boxed -> BOX; style.roundedCells -> CELL; else -> RectangleShape }),
                     contentAlignment = Alignment.CenterStart) {
                     Text(if (progs.isEmpty()) "No guide information" else "", fontSize = (12 * style.textScale).sp, color = colors.muted, modifier = Modifier.padding(horizontal = 10.dp))
                 }
@@ -244,11 +250,9 @@ private fun GuideRow(
                             val mark = if (focusedNow) style.focusedProgrammeText else Color.White
                             if (runsBefore) drawPath(Path().apply { moveTo(1f, mid); lineTo(1f + a, mid - a); lineTo(1f + a, mid + a); close() }, mark)
                             if (runsAfter) drawPath(Path().apply { val x = size.width - 1f; moveTo(x, mid); lineTo(x - a, mid - a); lineTo(x - a, mid + a); close() }, mark)
-                            // Scheduled or recording: a small red dot top-right.
-                            if (rec) drawCircle(REC_DOT, 3.dp.toPx(), Offset(size.width - 7.dp.toPx(), 7.dp.toPx()))
-                            // Reminder set: a small teal bell (left of the recording dot when both).
+                            // Reminder set: a small blue bell (left of the REC badge when both).
                             if (bell) {
-                                val cx = size.width - (if (rec) 18.dp else 8.dp).toPx(); val top = 3.dp.toPx(); val w = 7.dp.toPx(); val h = 6.dp.toPx()
+                                val cx = size.width - (if (rec) 66.dp else 12.dp).toPx(); val top = 3.dp.toPx(); val w = 7.dp.toPx(); val h = 6.dp.toPx()
                                 val c = if (focusedNow) style.focusedProgrammeText else BELL
                                 drawArc(c, 180f, 180f, true, Offset(cx - w / 2, top), Size(w, h * 1.2f))
                                 drawRect(c, Offset(cx - w / 2, top + h * .55f), Size(w, h * .45f))
@@ -259,15 +263,26 @@ private fun GuideRow(
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     Text(p.title, fontSize = (12.5f * style.textScale).sp, fontWeight = if (focusedNow) FontWeight.SemiBold else FontWeight.Normal,
-                        color = (if (focusedNow) style.focusedProgrammeText else Color.White).copy(alpha = if (past && !focusedNow) .55f else 1f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 10.dp))
+                        color = (if (focusedNow) style.focusedProgrammeText else Color.White).copy(alpha = if (past && !focusedNow) .55f else 1f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp, end = if (rec) 62.dp else 10.dp))
+                    // Scheduled or recording: a red REC badge (SERIES when a series rule scheduled it).
+                    if (rec) Box(Modifier.align(Alignment.CenterEnd).padding(end = 6.dp)) { RecBadge(series(p)) }
                 }
             }
         }
     }
 }
 
+@Composable
+private fun RecBadge(series: Boolean) {
+    Row(Modifier.clip(RoundedCornerShape(4.dp)).background(REC_DOT).padding(horizontal = 5.dp, vertical = 1.5.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(5.dp).background(Color.White, androidx.compose.foundation.shape.CircleShape))
+        Spacer(Modifier.width(3.dp))
+        Text(if (series) "SERIES" else "REC", fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = .5.sp, color = Color.White, maxLines = 1)
+    }
+}
+
 private val REC_DOT = Color(0xFFE53935)
-private val BELL = Color(0xFF5FD6DC)
+private val BELL = Color(0xFF8DB0FF)
 
 private val GLOW_ROOM = 24.dp
 

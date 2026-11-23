@@ -51,14 +51,17 @@ class RecordingService : Service() {
         val repo = container.recordings
         jobs[id] = scope.launch {
             val s = container.settings.settings.first()
-            val store = container.recordingStore(s)
-            if (store == null) {
-                container.db.recordingDao().get(id)?.let {
-                    container.db.recordingDao().update(it.copy(status = RecStatus.FAILED, statusReason = "Failed — no USB drive found"))
-                }
-                repo.prompt.value = Prompt.Notice("Recording failed: no USB drive found")
-                return@launch
+            // The chosen external storage is missing (drive unplugged, share unreachable): record to the box instead of failing.
+            var chosen = container.recordingStore(s)
+            if (chosen != null && s.recordTo == RecStorage.SMB &&
+                withContext(Dispatchers.IO) { testShare(container.smbSettings(s)) } != null) chosen = null
+            if (chosen == null) {
+                chosen = FileStore(RecStorage.INTERNAL, internalDir(applicationContext))
+                repo.prompt.value = Prompt.Notice(
+                    if (s.recordTo == RecStorage.SMB) "Couldn't reach the network share, recording to this box instead"
+                    else "USB drive not found, recording to this box instead")
             }
+            val store: RecordingStore = chosen
             container.db.recordingDao().get(id)?.let { r -> repo.running.update { it + (id to r) } }
             withContext(Dispatchers.Main) { holdLocks(s.keepAwake); notify(repo.running.value.values.map { it.title }) }
             val status = runRecording(id, container.db, store, StreamCapture(container.http),

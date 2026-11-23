@@ -42,7 +42,7 @@ import tv.luna.player.ui.theme.LocalTheme
 private val OK_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
 
 /**
- * The update pop-up, over whatever screen is showing, in Luna's teal. "Not now" closes it until the app is next opened
+ * The update pop-up, over whatever screen is showing, in Luna's blue. "Not now" closes it until the app is next opened
  * (with "Check for updates when Luna opens" on, it comes back then). The download runs in [background], so closing the
  * pop-up doesn't stop it.
  */

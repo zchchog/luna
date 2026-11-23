@@ -37,7 +37,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
 import tv.luna.player.ui.theme.LocalTheme
-import tv.luna.player.ui.theme.themeOf
+import tv.luna.player.ui.theme.Theme
+import tv.luna.player.ui.theme.AppColors
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,7 +54,6 @@ import tv.luna.player.ui.Screen
 import tv.luna.player.ui.Tab
 import tv.luna.player.ui.TopNav
 import tv.luna.player.ui.live.LiveGuideScreen
-import tv.luna.player.data.settings.ThemeId
 import tv.luna.player.ui.live.LiveViewModel
 import tv.luna.player.ui.vod.VodDetailScreen
 import tv.luna.player.ui.vod.VodHomeScreen
@@ -91,16 +91,14 @@ class MainActivity : ComponentActivity() {
                 .collect { (on, language) -> app.player.setSubtitles(on, language) }
         }
         setContent {
-            val themeId = app.settings.collectAsState().value.theme
-            // Luna always uses the teal look; the saved colour choice is ignored.
             val density = androidx.compose.ui.platform.LocalDensity.current
             val conf = androidx.compose.ui.platform.LocalConfiguration.current
-            CompositionLocalProvider(LocalTheme provides remember(themeId) { themeOf(themeId, tv.luna.player.data.settings.ThemeColour.TEAL) }) {
+            CompositionLocalProvider(LocalTheme provides Theme(AppColors)) {
             MaterialTheme(colorScheme = darkColorScheme()) {
             // Luna and Liquid Glass: every TV Text in Inter (the website's font). Inside MaterialTheme, which
             // otherwise sets its own sans-serif text style over anything provided outside it.
             CompositionLocalProvider(androidx.tv.material3.LocalTextStyle provides androidx.tv.material3.LocalTextStyle.current.copy(
-                fontFamily = if (tv.luna.player.ui.theme.usesInter(themeId)) tv.luna.player.ui.theme.Inter else androidx.tv.material3.LocalTextStyle.current.fontFamily)) {
+                fontFamily = tv.luna.player.ui.theme.Inter)) {
                 val stack by app.stack.collectAsState()
                 val tab by app.tab.collectAsState()
                 val grid by vod.gridCategory.collectAsState()
@@ -150,13 +148,10 @@ class MainActivity : ComponentActivity() {
                         showDate = false, pingMs = pingMs,
                         tabs = tv.luna.player.ui.visibleTabs(settings.recordingOn))
                 }
-                val themeId = LocalTheme.current.id
                 // A channel from search: its category becomes the guide's, so zapping and Back behave as from the guide.
                 val searchChannel = { ch: tv.luna.player.data.db.ChannelEntity ->
                     live.startOn(ch); app.playFullScreen(ch.displayName(live.strip.value), live = true)
                 }
-                // Recording switched off while its tab is open: back to Live.
-                LaunchedEffect(settings.recordingOn) { if (!settings.recordingOn && tab == Tab.RECORDINGS) selectTab(Tab.LIVE) }
                 Box(Modifier.fillMaxSize().background(Color.Black)) {
                     val full: (tv.luna.player.data.db.ChannelEntity) -> Unit = { ch ->
                         live.preview(ch)
@@ -234,7 +229,7 @@ class MainActivity : ComponentActivity() {
                             append(" to exit application")
                         }, fontSize = 14.sp, color = Color.White,
                         modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 40.dp)
-                            .background(Color(0xE6052228), RoundedCornerShape(20.dp)).padding(horizontal = 20.dp, vertical = 9.dp),
+                            .background(tv.luna.player.ui.PanelBrush, RoundedCornerShape(20.dp)).padding(horizontal = 20.dp, vertical = 9.dp),
                     )
                 }
             }

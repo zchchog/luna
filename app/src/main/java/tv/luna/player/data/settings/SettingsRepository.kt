@@ -14,8 +14,6 @@ import kotlinx.coroutines.flow.map
 
 /** AppSettings in the app's DataStore, alongside ProviderRepository's "active_provider_id". */
 class SettingsRepository(private val prefs: DataStore<Preferences>) {
-    private val theme = stringPreferencesKey("theme")
-    private val themeColour = stringPreferencesKey("theme_colour")
     private val autoplay = booleanPreferencesKey("autoplay_on_scroll")
     private val decoder = stringPreferencesKey("audio_decoder")
     private val confirmExit = booleanPreferencesKey("confirm_exit")
@@ -61,8 +59,6 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
     private fun Preferences.toSettings(): AppSettings {
         val d = AppSettings()
         return AppSettings(
-            theme = themeIdOf(this[theme]),
-            themeColour = ThemeColour.entries.find { it.name == this[themeColour] } ?: d.themeColour,
             autoplayOnScroll = this[autoplay] ?: d.autoplayOnScroll,
             audioDecoder = this[decoder]?.let { n -> AudioDecoder.entries.find { it.name == n } } ?: d.audioDecoder,
             confirmExit = this[confirmExit] ?: d.confirmExit,
@@ -99,8 +95,6 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
     }
 
     private fun MutablePreferences.write(s: AppSettings) {
-        this[theme] = s.theme.name
-        this[themeColour] = s.themeColour.name
         this[autoplay] = s.autoplayOnScroll
         this[decoder] = s.audioDecoder.name
         this[confirmExit] = s.confirmExit

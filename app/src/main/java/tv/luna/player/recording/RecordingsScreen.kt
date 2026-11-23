@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -28,6 +28,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,21 +74,32 @@ private fun RecordingEntity.playable() = location != null && (status == RecStatu
 fun RecordingMenu(r: RecordingEntity, all: Boolean, onPlay: (RecordingEntity) -> Unit, onDismiss: () -> Unit) {
     val c = (LocalContext.current.applicationContext as IptvApp).container
     val scope = rememberCoroutineScope()
-    var confirm by remember(r.id) { mutableStateOf(false) }
-    if (confirm) {
-        ContextMenu("Delete ${r.title}?", listOf(
+    // "one": deleting this recording; "series": what to do with the whole series.
+    var confirm by remember(r.id) { mutableStateOf<String?>(null) }
+    val seriesId = r.seriesId
+    fun stopSeries(deleteRecorded: Boolean) {
+        scope.launch { if (seriesId != null) c.recordings.stopSeries(seriesId, deleteRecorded, c::deleteRecordingFile) }
+        onDismiss()
+    }
+    when (confirm) {
+        "one" -> { ContextMenu("Delete ${r.title}?", listOf(
             "Delete" to { scope.launch { c.recordings.delete(r.id, c::deleteRecordingFile) }; onDismiss() },
             "Cancel" to onDismiss,
-        ), onDismiss)
-        return
+        ), onDismiss); return }
+        "series" -> { ContextMenu("${r.title}\nThe whole series", listOf(
+            "Stop the series, keep what's recorded" to { stopSeries(false) },
+            "Stop the series and delete all its recordings" to { stopSeries(true) },
+            "Cancel" to onDismiss,
+        ), onDismiss); return }
     }
     val items = buildList {
         if (all && r.playable()) add("Play" to { onDismiss(); onPlay(r) })
         when (r.status) {
-            RecStatus.SCHEDULED -> add("Cancel recording" to { scope.launch { c.recordings.cancel(r.id) }; onDismiss() })
+            RecStatus.SCHEDULED -> add((if (seriesId != null) "Cancel this episode" else "Cancel recording") to { scope.launch { c.recordings.cancel(r.id) }; onDismiss() })
             RecStatus.RECORDING -> add("Stop recording" to { c.recordings.stop(r.id); onDismiss() })
-            else -> add("Delete" to { confirm = true })
+            else -> add((if (seriesId != null) "Delete this episode" else "Delete") to { confirm = "one" })
         }
+        if (seriesId != null) add((if (r.status == RecStatus.SCHEDULED || r.status == RecStatus.RECORDING) "Stop recording the series" else "Delete all episodes in this series") to { confirm = "series" })
     }
     ContextMenu(r.title, items, onDismiss)
 }
@@ -113,27 +126,41 @@ fun RecordingsScreen(nav: (@Composable () -> Unit)?, onPlay: (RecordingEntity) -
     Box(if (nav != null) Modifier.fillMaxSize().guideBackground() else Modifier.fillMaxSize()) {
         Column(Modifier.padding(if (nav != null) androidx.compose.foundation.layout.PaddingValues(start = 50.dp, end = 50.dp, top = 22.dp) else androidx.compose.foundation.layout.PaddingValues(0.dp))) {
             nav?.invoke()
-            val list = rows
+            val list = rows?.filter { !(it.status == RecStatus.SKIPPED && it.statusReason == CANCELLED) }
             if (list != null && list.isEmpty()) {
-                FocusBox(onClick = {}, modifier = firstModifier.padding(top = 32.dp)) { f ->
-                    Text("No recordings yet. Hold OK on a channel in the guide to record it.", fontSize = 16.sp,
-                        color = if (f) colors.onFocus else textColor,
-                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(if (f) colors.focus else Color.Transparent).padding(14.dp))
+                // Plain text: nothing to select here.
+                Column(Modifier.padding(start = 8.dp, top = 40.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Nothing recorded yet", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = textColor)
+                    Text("Hold OK on a programme in the TV guide and choose Record. It will show up here.", fontSize = 15.sp, color = textColor.copy(alpha = .8f))
                 }
             }
+            val all = list.orEmpty()
+            val sections = listOf(
+                "Recording now" to all.filter { it.status == RecStatus.RECORDING },
+                "Scheduled" to all.filter { it.status == RecStatus.SCHEDULED },
+                "Recorded" to all.filter { it.playable() },
+                "Didn't record" to all.filter { it.status == RecStatus.FAILED || it.status == RecStatus.SKIPPED || it.status == RecStatus.MISSED },
+            ).filter { it.second.isNotEmpty() }
+            val firstId = sections.firstOrNull()?.second?.firstOrNull()?.id
             // Entering the list (Down from the menu) lands on a row: the last one used, else the first.
-            val enterRow = (lastRow?.takeIf { id -> list.orEmpty().any { it.id == id } } ?: list?.firstOrNull()?.id)?.let { rowFocus[it] }
+            val enterRow = (lastRow?.takeIf { id -> list.orEmpty().any { it.id == id } } ?: firstId)?.let { rowFocus[it] }
             LazyColumn(Modifier.padding(top = if (nav != null) 24.dp else 8.dp)
                 .focusProperties { enter = { enterRow ?: androidx.compose.ui.focus.FocusRequester.Default } }.focusGroup(),
                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                itemsIndexed(list.orEmpty(), key = { _, r -> r.id }) { i, r ->
-                    FocusBox(
-                        onClick = { if (r.playable()) onPlay(r) else menu = r to false },
-                        modifier = (if (i == 0) firstModifier else Modifier)
-                            .focusRequester(rowFocus.getOrPut(r.id) { androidx.compose.ui.focus.FocusRequester() })
-                            .onLongOk { menu = r to false },
-                        onFocused = { lastRow = r.id },
-                    ) { f -> RecordingRow(r, f, textColor) }
+                sections.forEach { (heading, items) ->
+                    item(key = "h-$heading") {
+                        Text(heading.uppercase(), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.5.sp, color = colors.muted,
+                            modifier = Modifier.padding(top = 14.dp, bottom = 4.dp, start = 4.dp))
+                    }
+                    items(items, key = { it.id }) { r ->
+                        FocusBox(
+                            onClick = { if (r.playable()) onPlay(r) else menu = r to false },
+                            modifier = (if (r.id == firstId) firstModifier else Modifier)
+                                .focusRequester(rowFocus.getOrPut(r.id) { androidx.compose.ui.focus.FocusRequester() })
+                                .onLongOk { menu = r to false },
+                            onFocused = { lastRow = r.id },
+                        ) { f -> RecordingRow(r, f, textColor) }
+                    }
                 }
             }
         }
@@ -145,7 +172,7 @@ fun RecordingsScreen(nav: (@Composable () -> Unit)?, onPlay: (RecordingEntity) -
 private fun RecordingRow(r: RecordingEntity, f: Boolean, textColor: Color) {
     val colors = LocalTheme.current.colors
     val fg = if (f) colors.onFocus else textColor
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (f) colors.focus else colors.cell).padding(horizontal = 16.dp, vertical = 10.dp),
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (f) SolidColor(colors.focus) else fadeRight(colors.cell)).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(64.dp, 40.dp), contentAlignment = Alignment.Center) {
             if (r.channelLogo != null) coil.compose.AsyncImage(r.channelLogo, null, Modifier.fillMaxSize())
@@ -154,7 +181,7 @@ private fun RecordingRow(r: RecordingEntity, f: Boolean, textColor: Color) {
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
             Text(r.title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text("${r.channelName} · ${recordingWhen(r)}", fontSize = 12.sp, color = fg.copy(alpha = .75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("${r.channelName} · ${recordingWhen(r)}${if (r.seriesId != null) " · Series" else ""}", fontSize = 12.sp, color = fg.copy(alpha = .75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         val status = recordingStatus(r)
         if (status.isNotEmpty()) {
@@ -163,3 +190,6 @@ private fun RecordingRow(r: RecordingEntity, f: Boolean, textColor: Color) {
         }
     }
 }
+
+/** Solid on the left, then fading to nothing towards the right edge. */
+private fun fadeRight(c: Color) = Brush.horizontalGradient(0f to c, .45f to c.copy(alpha = c.alpha * .7f), 1f to c.copy(alpha = 0f))

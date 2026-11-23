@@ -57,9 +57,9 @@ import kotlinx.coroutines.delay
 import tv.luna.player.player.PlayerManager
 import tv.luna.player.player.TrackOption
 
-private val Accent = Color(0xFF5FD6DC)
-private val Glow = Color(0xFFEFFBFC)
-private val Ink = Color(0xFF06323A)
+private val Accent = Color(0xFF8DB0FF)
+private val Glow = Color(0xFFEEF3FF)
+private val Ink = Color(0xFF0A1753)
 private val OK_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
 
 private fun clock(ms: Long): String {
@@ -172,7 +172,7 @@ fun VodControls(
         AnimatedVisibility(visible, enter = fadeIn(tween(200)), exit = fadeOut(tween(300))) {
             Box(Modifier.fillMaxSize()) {
                 Box(Modifier.fillMaxWidth().height(130.dp).background(Brush.verticalGradient(listOf(Color(0xCC000000), Color.Transparent))))
-                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(200.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6031A1F)))))
+                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(200.dp).background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xE6050B2B)))))
                 Text(title, fontSize = 22.sp, fontFamily = Montserrat, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1,
                     modifier = Modifier.padding(start = 48.dp, top = 30.dp, end = 160.dp))
                 if (paused) Text("Paused", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Ink,
@@ -184,7 +184,7 @@ fun VodControls(
                     Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
                         Text(clock(position), fontSize = 12.sp, color = Color.White)
                         Spacer(Modifier.weight(1f))
-                        Text(if (duration > 0) "-" + clock(duration - position) else "", fontSize = 12.sp, color = Color(0xCCEFFBFC))
+                        Text(if (duration > 0) "-" + clock(duration - position) else "", fontSize = 12.sp, color = Color(0xCCEEF3FF))
                     }
                     Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Spacer(Modifier.weight(1f))
@@ -208,7 +208,7 @@ fun VodControls(
         if (state == androidx.media3.common.Player.STATE_BUFFERING || (state == androidx.media3.common.Player.STATE_IDLE && duration == 0L)) {
             Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spinner(size = 34.dp, color = Color.White)
-                Text("Loading…", fontSize = 13.sp, color = Color(0xCCEFFBFC), modifier = Modifier.padding(top = 10.dp))
+                Text("Loading…", fontSize = 13.sp, color = Color(0xCCEEF3FF), modifier = Modifier.padding(top = 10.dp))
             }
         }
 
@@ -216,15 +216,15 @@ fun VodControls(
         AnimatedVisibility(showNext, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 48.dp, bottom = if (visible) 96.dp else 40.dp),
             enter = fadeIn(tween(250)), exit = fadeOut(tween(200))) {
             FocusBox(onClick = { if (!nextGone) { nextGone = true; onNext() } }, modifier = Modifier.focusRequester(nextFocus)) { f ->
-                Row(Modifier.clip(RoundedCornerShape(14.dp)).background(if (f) Glow else Color(0xE606323A))
-                    .border(1.dp, if (f) Color.Transparent else Color(0x665FD6DC), RoundedCornerShape(14.dp)).padding(horizontal = 16.dp, vertical = 10.dp),
+                Row(Modifier.clip(RoundedCornerShape(14.dp)).background(if (f) Glow else Color(0xE60A1753))
+                    .border(1.dp, if (f) Color.Transparent else Color(0x668DB0FF), RoundedCornerShape(14.dp)).padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     Column {
                         Text("NEXT EPISODE", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, color = if (f) Ink else Accent)
                         Text(nextLabel.orEmpty(), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = if (f) Ink else Color.White)
                     }
                     Spacer(Modifier.width(14.dp))
-                    Text(if (remaining < Long.MAX_VALUE) "${(remaining / 1000).coerceAtLeast(0)}s" else "", fontSize = 13.sp, color = if (f) Ink else Color(0xCCEFFBFC))
+                    Text(if (remaining < Long.MAX_VALUE) "${(remaining / 1000).coerceAtLeast(0)}s" else "", fontSize = 13.sp, color = if (f) Ink else Color(0xCCEEF3FF))
                 }
             }
         }
@@ -335,8 +335,8 @@ private fun TrackList(title: String, options: List<Pair<String, Boolean>>, onPic
     LaunchedEffect(Unit) { withFrameNanos { }; runCatching { first.requestFocus() } }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
         Column(
-            Modifier.padding(end = 48.dp).width(300.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xF206323A))
-                .border(1.dp, Color(0x525FD6DC), RoundedCornerShape(18.dp)).padding(14.dp),
+            Modifier.padding(end = 48.dp).width(300.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xF20A1753))
+                .border(1.dp, Color(0x528DB0FF), RoundedCornerShape(18.dp)).padding(14.dp),
         ) {
             Text(title.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, color = Accent,
                 modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))

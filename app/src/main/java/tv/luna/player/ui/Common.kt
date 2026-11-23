@@ -52,7 +52,7 @@ enum class Tab(val label: String, @androidx.annotation.DrawableRes val icon: Int
 }
 
 /** The main menu's entries: Recordings only while recording is switched on. */
-fun visibleTabs(recordingOn: Boolean): List<Tab> = Tab.entries.filter { it != Tab.RECORDINGS || recordingOn }
+fun visibleTabs(recordingOn: Boolean): List<Tab> = Tab.entries.toList()
 
 /** A D-pad focusable, OK-clickable box that tells its content whether it has focus. */
 @Composable
@@ -82,9 +82,9 @@ fun TopNav(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
             sections.forEach { t ->
                 FocusBox(onClick = { onSelect(t) }, modifier = focusFor(t)) { f ->
                     Text(t.label, fontSize = 12.sp, fontWeight = FontWeight.Medium,
-                        color = when { f -> Color(0xFF06323A); t == selected -> Color.White; else -> Color(0xB3EFFBFC) },
+                        color = when { f -> Color(0xFF0A1753); t == selected -> Color.White; else -> Color(0xB3EEF3FF) },
                         modifier = Modifier.clip(RoundedCornerShape(13.dp))
-                            .background(when { f -> Color(0xFFEFFBFC); t == selected -> Color(0x385FD6DC); else -> Color.Transparent })
+                            .background(when { f -> Color(0xFFEEF3FF); t == selected -> Color(0x388DB0FF); else -> Color.Transparent })
                             .padding(horizontal = 12.dp, vertical = 5.dp))
                 }
             }
@@ -97,18 +97,18 @@ fun TopNav(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // The sections sit together in one glass panel.
-        Box(Modifier.clip(RoundedCornerShape(17.dp)).background(Color(0xA606323A)).border(1.dp, Color(0x525FD6DC), RoundedCornerShape(17.dp)).padding(3.dp)) {
+        Box(Modifier.clip(RoundedCornerShape(17.dp)).background(Color(0xA60A1753)).border(1.dp, Color(0x528DB0FF), RoundedCornerShape(17.dp)).padding(3.dp)) {
             sectionRow()
         }
         listOf(Tab.SEARCH, Tab.SETTINGS).filter { it in tabs }.forEach { t ->
             FocusBox(onClick = { onSelect(t) }, modifier = focusFor(t)) { f ->
                 Box(
                     Modifier.size(30.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(when { f -> Color(0xFFEFFBFC); t == selected -> Color(0x385FD6DC); else -> Color(0xA606323A) })
-                        .border(1.dp, if (f) Color.Transparent else Color(0x525FD6DC), androidx.compose.foundation.shape.CircleShape),
+                        .background(when { f -> Color(0xFFEEF3FF); t == selected -> Color(0x388DB0FF); else -> Color(0xA60A1753) })
+                        .border(1.dp, if (f) Color.Transparent else Color(0x528DB0FF), androidx.compose.foundation.shape.CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(painterResource(t.icon), contentDescription = t.label, tint = if (f) Color(0xFF06323A) else Color.White, modifier = Modifier.size(14.dp))
+                    Icon(painterResource(t.icon), contentDescription = t.label, tint = if (f) Color(0xFF0A1753) else Color.White, modifier = Modifier.size(14.dp))
                 }
             }
         }

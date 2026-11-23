@@ -29,7 +29,9 @@ class SettingsRepositoryTest {
     @Test fun defaultsMatchSpec() = runTest { assertEquals(AppSettings(), repo.settings.first()) }
 
     @Test fun updateRoundTripsEveryField() = runTest {
-        val s = AppSettings(ThemeId.LUNA, true, AudioDecoder.HARDWARE, false, true, 24, true, false, 14, 0, 42L, true)
+        val s = AppSettings(autoplayOnScroll = true, audioDecoder = AudioDecoder.HARDWARE, confirmExit = false, startOnBoot = true,
+            epgUpdateIntervalHours = 24, epgUpdateOnStart = true, epgUpdateOnPlaylistChange = false, epgDaysToKeep = 14,
+            epgPastDays = 0, lastLiveChannelId = 42L, matchTvLanguage = true)
             .copy(subtitlesOn = true, subtitleLanguage = "fr")
         repo.update { s }
         assertEquals(s, repo.settings.first())
@@ -39,20 +41,6 @@ class SettingsRepositoryTest {
         repo.update { it.copy(subtitleLanguage = "fr") }
         repo.update { it.copy(subtitleLanguage = null) }
         assertEquals(null, repo.settings.first().subtitleLanguage)
-    }
-
-    @Test fun themeRoundTrips() = runTest {
-        repo.update { it.copy(theme = ThemeId.LUNA) }
-        assertEquals(ThemeId.LUNA, repo.settings.first().theme)
-        prefs.edit { it[stringPreferencesKey("theme")] = "MIDNIGHT" }
-        assertEquals(ThemeId.LUNA, repo.settings.first().theme)
-    }
-
-    @Test fun themeColourRoundTripsAndUnknownReadsDefault() = runTest {
-        repo.update { it.copy(themeColour = ThemeColour.TEAL) }
-        assertEquals(ThemeColour.TEAL, repo.settings.first().themeColour)
-        prefs.edit { it[stringPreferencesKey("theme_colour")] = "nonsense" }
-        assertEquals(ThemeColour.DEFAULT, repo.settings.first().themeColour)
     }
 
     @Test fun outOfRangeValuesAreClamped() = runTest {
