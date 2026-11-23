@@ -28,7 +28,8 @@ fun AboutRows(s: tv.luna.player.data.settings.AppSettings, first: Modifier, onCh
     var result by remember { mutableStateOf<String?>(null) }
     Text("Created by Luna Developers", fontSize = 18.sp, color = Color.White, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
     Text("Version ${BuildConfig.VERSION_NAME}", fontSize = 16.sp, color = Color.White, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
-    Text("Based on IMD TV. Licence: GPL-3.0", fontSize = 16.sp, color = Color.White, modifier = Modifier.padding(start = 4.dp, bottom = 18.dp))
+    Text("Based on IMD TV. Licence: GPL-3.0", fontSize = 16.sp, color = Color.White, modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
+    Text("Show covers from tvmaze.com", fontSize = 13.sp, color = Color.White.copy(alpha = .7f), modifier = Modifier.padding(start = 4.dp, bottom = 18.dp))
     // Checks github.com/zchchog/lunaro-tv; OK opens the update prompt when a newer version is out.
     val updater = (LocalContext.current.applicationContext as IptvApp).container.updater
     val update by updater.available.collectAsState()

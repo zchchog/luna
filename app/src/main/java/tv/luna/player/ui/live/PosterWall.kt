@@ -47,53 +47,17 @@ import tv.luna.player.IptvApp
 fun PosterWall(modifier: Modifier) {
     val ctx = LocalContext.current.applicationContext
     val c = (ctx as IptvApp).container
-    val posters by produceState(cachedWall?.second.orEmpty()) {
-        val p = c.providerRepository.activeProviderId.first() ?: return@produceState
-        // Already checked for this playlist since the app opened: show it at once.
-        cachedWall?.takeIf { it.first == p && it.second.size >= 6 }?.let { value = it.second; return@produceState }
-        // UK favourites of 2026 first (when the playlist has them), topped up with the newest additions.
-        val popular = buildList {
-            val n = maxOf(POPULAR_FILMS.size, POPULAR_SHOWS.size)
-            for (i in 0 until n) {
-                POPULAR_FILMS.getOrNull(i)?.let { t -> runCatching { c.db.movieDao().posterFor(p, t) }.getOrNull()?.let(::add) }
-                POPULAR_SHOWS.getOrNull(i)?.let { t -> runCatching { c.db.seriesDao().posterFor(p, t) }.getOrNull()?.let(::add) }
-            }
-        }
-        val films = runCatching { c.db.movieDao().newestPosters(p, 30) }.getOrDefault(emptyList())
-        val shows = runCatching { c.db.seriesDao().newestPosters(p, 30) }.getOrDefault(emptyList())
-        val newest = films.zip(shows).flatMap { listOf(it.first, it.second) } + films.drop(shows.size) + shows.drop(films.size)
-        // Only covers whose picture really loads, so the wall never shows empty tiles (dead links are skipped).
-        val candidates = (popular + newest).distinct().take(48)
-        val loader = coil.Coil.imageLoader(ctx)
-        val gate = kotlinx.coroutines.sync.Semaphore(4) // a few at a time, so loading never slows the guide down
-        // The wall appears as soon as six covers have loaded and fills up as the rest are checked, instead of
-        // waiting for every cover (a slow or dead link could otherwise keep it away for minutes).
-        val good = java.util.Collections.synchronizedList(ArrayList<String>())
-        kotlinx.coroutines.coroutineScope {
-            candidates.map { url ->
-                async {
-                    val r = gate.withPermit {
-                        runCatching {
-                            kotlinx.coroutines.withTimeoutOrNull(5_000) {
-                                loader.execute(coil.request.ImageRequest.Builder(ctx).data(url).size(200, 300).build())
-                            }
-                        }.getOrNull()
-                    }
-                    if (r is coil.request.SuccessResult) {
-                        good += url
-                        if (good.size == 6 || good.size % 6 == 0) value = good.toList().take(36)
-                    }
-                }
-            }.awaitAll()
-        }
-        value = good.toList().take(36)
-        cachedWall = p to value
+    // UK series covers (not the playlist's own): the first six show as soon as they are found, the rest join in.
+    val posters by produceState(cachedWall.orEmpty()) {
+        if (cachedWall != null && cachedWall!!.size >= 12) { value = cachedWall!!; return@produceState }
+        val all = ukCovers(ctx, c.http) { value = it }
+        if (all.size >= 6) { value = all; cachedWall = all }
     }
     if (posters.size < 6) return
     // Structured motion: tilted columns gliding in a steady loop, alternate columns going up and down
     // (no wandering back and forth). Each column holds PER posters drawn twice, so the loop is seamless.
     val cols = 6
-    val per = 6
+    val per = (posters.size / cols).coerceIn(2, 9)
     val step = 160.dp // poster height + gap
     val columns = List(cols) { c ->
         val mine = posters.filterIndexed { i, _ -> i % cols == c }.ifEmpty { posters }
@@ -147,19 +111,5 @@ fun PosterWall(modifier: Modifier) {
     }
 }
 
-/** The covers last checked for the wall (playlist id to covers), so coming back to the guide shows it straight away. */
-private var cachedWall: Pair<Long, List<String>>? = null
-
-/** The UK's most popular films of 2026 (box office). */
-private val POPULAR_FILMS = listOf(
-    "Spider-Man: Brand New Day", "The Odyssey", "Michael", "Toy Story 5", "Super Mario Galaxy", "Project Hail Mary",
-    "Hamnet", "Wuthering Heights", "Avatar: Fire and Ash", "Zootropolis 2", "Zootopia 2", "Mandalorian", "Minions 3",
-    "Obsession", "Disclosure Day", "Magic Faraway Tree", "Hoppers", "Scary Movie", "KPop Demon Hunters",
-)
-
-/** The UK's most watched and streamed series of 2026. */
-private val POPULAR_SHOWS = listOf(
-    "The Traitors", "The Night Manager", "Adolescence", "Blue Lights", "Run Away", "Stranger Things", "Slow Horses",
-    "The White Lotus", "Severance", "The Last of Us", "House of the Dragon", "Fallout", "Squid Game", "Wednesday",
-    "Bridgerton", "Ted Lasso", "Brooklyn Nine-Nine", "The Rookie", "Reacher", "The Boys", "Happy Valley", "Gogglebox",
-)
+/** The covers found since the app opened, so coming back to the guide shows the wall straight away. */
+private var cachedWall: List<String>? = null
