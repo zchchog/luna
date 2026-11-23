@@ -198,7 +198,7 @@ fun Poster(item: VodItem?, modifier: Modifier = Modifier, caption: Boolean = fal
 /** The card behind every cover: blue gradient, two faint moons, and the title near the bottom. */
 @Composable
 fun PosterFallback(title: String?) {
-    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF3459CA), Color(0xFF1A39A6), Color(0xFF0A1753)))),
+    Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(tv.luna.player.ui.theme.Palette.bright, tv.luna.player.ui.theme.Palette.inkMid, tv.luna.player.ui.theme.Palette.ink))),
         contentAlignment = Alignment.BottomStart) {
         androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
             val r = size.minDimension

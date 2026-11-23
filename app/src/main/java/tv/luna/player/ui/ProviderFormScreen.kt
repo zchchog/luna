@@ -93,16 +93,16 @@ fun ProviderFormScreen(vm: AppViewModel, editId: Long? = null) {
 
 private enum class Step { CHOOSE, FORM }
 
-// Luna's setup colours (on top of the blue theme).
-private val Ink = Color(0xFF0A1753)
-private val InkMid = Color(0xFF1A39A6)
+// Luna's setup colours (on top of the teal theme).
+private val Ink: Color get() = tv.luna.player.ui.theme.Palette.ink
+private val InkMid: Color get() = tv.luna.player.ui.theme.Palette.inkMid
 private val Soft = Color(0xD1EEF3FF)
 private val Faint = Color(0x99EEF3FF)
 private val Problem = Color(0xFFFFC9BF)
 private val FocusFill = Brush.verticalGradient(listOf(Color.White, Color(0xFFE3EBFF)))
 private val PanelShape = RoundedCornerShape(18.dp)
 
-private fun Modifier.panel() = clip(PanelShape).background(Color(0x8C071040)).border(1.dp, Color(0x29FFFFFF), PanelShape)
+private fun Modifier.panel() = clip(PanelShape).background(Color(0x8C020822)).border(1.dp, Color(0x29FFFFFF), PanelShape)
 private fun Modifier.glow(on: Boolean, shape: androidx.compose.ui.graphics.Shape) =
     if (on) shadow(22.dp, shape, ambientColor = BrandGlow, spotColor = BrandGlow) else this
 private fun Modifier.grow(on: Boolean, by: Float = 1.05f) = graphicsLayer { val s = if (on) by else 1f; scaleX = s; scaleY = s }
@@ -311,7 +311,7 @@ private fun LunaField(
         // Selected text: a light blue wash, not the default dark blue.
         androidx.compose.runtime.CompositionLocalProvider(
             androidx.compose.foundation.text.selection.LocalTextSelectionColors provides
-                androidx.compose.foundation.text.selection.TextSelectionColors(handleColor = Color.White, backgroundColor = Color(0x66A0BEFF)),
+                androidx.compose.foundation.text.selection.TextSelectionColors(handleColor = Color.White, backgroundColor = Color(0x66BFE0FF)),
         ) {
         BasicTextField(
             value = value, onValueChange = onChange, singleLine = !multiLine, readOnly = !editing,
@@ -376,7 +376,7 @@ private fun Connecting(progress: String?) {
                 infiniteRepeatable(tween(1300, easing = LinearEasing), RepeatMode.Restart), label = "slide")
             BoxWithConstraints(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color(0x26FFFFFF))) {
                 Box(Modifier.offset(x = maxWidth * (t * 1.35f - .35f)).width(maxWidth * .35f).height(6.dp)
-                    .background(Brush.horizontalGradient(listOf(Color(0xFF9CB8FF), Color(0xFFEEF3FF))), RoundedCornerShape(3.dp)))
+                    .background(Brush.horizontalGradient(listOf(tv.luna.player.ui.theme.Palette.moon, Color(0xFFEEF3FF))), RoundedCornerShape(3.dp)))
             }
         }
         Text("Big services can take a minute the first time", fontSize = 11.sp, color = Faint)
@@ -478,7 +478,7 @@ fun ActivateScreen(check: suspend (String) -> Boolean) {
             horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.width(390.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 LunaWordmark(72.sp, 12.sp)
-                Row(Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0x298DB0FF)).padding(horizontal = 10.dp, vertical = 5.dp),
+                Row(Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0x295CB8FF)).padding(horizontal = 10.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     Icon(LockIcon, BrandGlow, 14.dp)
                     Text("INVITE ONLY", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, color = BrandGlow)

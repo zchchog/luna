@@ -110,7 +110,7 @@ internal val PanelBrush = Brush.verticalGradient(listOf(PANEL_TOP, PANEL_BOTTOM)
 @Composable
 internal fun MenuItem(label: String, modifier: Modifier, onClick: () -> Unit) {
     FocusBox(onClick = onClick, modifier = modifier) { f ->
-        Text(label, fontSize = 15.sp, color = if (f) Color(0xFF0A1753) else Color.White,
+        Text(label, fontSize = 15.sp, color = if (f) Color(0xFF06143D) else Color.White,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(if (f) Color.White else Color.Transparent)
                 .padding(horizontal = 14.dp, vertical = 9.dp))
     }

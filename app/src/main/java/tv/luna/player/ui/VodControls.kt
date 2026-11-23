@@ -57,9 +57,9 @@ import kotlinx.coroutines.delay
 import tv.luna.player.player.PlayerManager
 import tv.luna.player.player.TrackOption
 
-private val Accent = Color(0xFF8DB0FF)
+private val Accent: Color get() = tv.luna.player.ui.theme.Palette.accent
 private val Glow = Color(0xFFEEF3FF)
-private val Ink = Color(0xFF0A1753)
+private val Ink: Color get() = tv.luna.player.ui.theme.Palette.ink
 private val OK_KEYS = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
 
 private fun clock(ms: Long): String {
@@ -216,8 +216,8 @@ fun VodControls(
         AnimatedVisibility(showNext, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 48.dp, bottom = if (visible) 96.dp else 40.dp),
             enter = fadeIn(tween(250)), exit = fadeOut(tween(200))) {
             FocusBox(onClick = { if (!nextGone) { nextGone = true; onNext() } }, modifier = Modifier.focusRequester(nextFocus)) { f ->
-                Row(Modifier.clip(RoundedCornerShape(14.dp)).background(if (f) Glow else Color(0xE60A1753))
-                    .border(1.dp, if (f) Color.Transparent else Color(0x668DB0FF), RoundedCornerShape(14.dp)).padding(horizontal = 16.dp, vertical = 10.dp),
+                Row(Modifier.clip(RoundedCornerShape(14.dp)).background(if (f) Glow else Color(0xE606143D))
+                    .border(1.dp, if (f) Color.Transparent else Color(0x665CB8FF), RoundedCornerShape(14.dp)).padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     Column {
                         Text("NEXT EPISODE", fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, color = if (f) Ink else Accent)
@@ -335,8 +335,8 @@ private fun TrackList(title: String, options: List<Pair<String, Boolean>>, onPic
     LaunchedEffect(Unit) { withFrameNanos { }; runCatching { first.requestFocus() } }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
         Column(
-            Modifier.padding(end = 48.dp).width(300.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xF20A1753))
-                .border(1.dp, Color(0x528DB0FF), RoundedCornerShape(18.dp)).padding(14.dp),
+            Modifier.padding(end = 48.dp).width(300.dp).clip(RoundedCornerShape(18.dp)).background(Color(0xF206143D))
+                .border(1.dp, tv.luna.player.ui.theme.Palette.navBorder, RoundedCornerShape(18.dp)).padding(14.dp),
         ) {
             Text(title.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp, color = Accent,
                 modifier = Modifier.padding(start = 8.dp, bottom = 8.dp))

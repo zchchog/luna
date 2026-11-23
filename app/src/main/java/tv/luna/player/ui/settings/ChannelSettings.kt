@@ -202,7 +202,7 @@ private fun CategoryListPage(vm: SettingsViewModel, kind: Kind, first: FocusRequ
                     },
             ) { f ->
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                    .background(if (isMoving) Color(0xFF8DB0FF) else if (f) Color.White else Color(0x14FFFFFF))
+                    .background(if (isMoving) Color(0xFF5CB8FF) else if (f) Color.White else Color(0x14FFFFFF))
                     .padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         val fg = if (f || isMoving) Color.Black else Color.White

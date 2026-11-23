@@ -9,12 +9,12 @@ data class ThemeColors(
     val accent: Color, val text: Color, val muted: Color, val vodBg: Color, val vodCard: Color,
 )
 
-/** The app's one look: the deep sky-blue gradient (navy at the top left, lighter blue at the bottom right). */
+/** The app's one look: the sky-blue gradient (deep navy at the top left, bright blue at the bottom right). */
 val AppColors = ThemeColors(
-    bg = listOf(Color(0xFF0A1753), Color(0xFF1A39A6), Color(0xFF3459CA)),
-    panel = Color(0xF0071040), cell = Color(0x8C3F63CF), cellDim = Color(0x59365ABD),
-    focus = Color(0xFFEEF3FF), onFocus = Color(0xFF0A1753), accent = Color(0xFF8DB0FF),
-    text = Color.White, muted = Color(0x9EFFFFFF), vodBg = Color(0xFF0A1440), vodCard = Color(0xFF16245E),
+    bg = listOf(Color(0xFF030B2E), Color(0xFF0A2C86), Color(0xFF1F63E0)),
+    panel = Color(0xF0020822), cell = Color(0x8C3170E2), cellDim = Color(0x591F63E0),
+    focus = Color(0xFFEEF3FF), onFocus = Color(0xFF030B2E), accent = Color(0xFF5CB8FF),
+    text = Color.White, muted = Color(0x9EFFFFFF), vodBg = Color(0xFF030A29), vodCard = Color(0xFF05174D),
 )
 
 data class Theme(val colors: ThemeColors)

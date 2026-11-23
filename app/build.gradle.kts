@@ -92,6 +92,8 @@ dependencies {
     implementation(libs.media3.ffmpeg)
     implementation(libs.work.runtime)
     implementation(libs.coil.compose)
+    // Lets Android pre-compile the app's hot code when installed outside the Play Store (much smoother on TV boxes).
+    implementation("androidx.profileinstaller:profileinstaller:1.3.1")
     implementation(libs.smbj) // recordings on a network share
 
     testImplementation(libs.junit)
