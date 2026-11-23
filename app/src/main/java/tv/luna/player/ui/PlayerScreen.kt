@@ -48,7 +48,7 @@ import tv.luna.player.ui.live.LiveViewModel
 private val OK = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
 private val PLAY_PAUSE = setOf(Key.MediaPlayPause, Key.MediaPlay, Key.MediaPause)
 
-/** Full-screen playback. Live ([liveVm] set) adds the info overlay (OK opens, Back closes, 5s auto-hide) and Up/Down zapping. */
+/** Full-screen playback. Live ([liveVm] set) adds the info overlay (OK opens, Back closes, 8s auto-hide) and Up/Down zapping. */
 @Composable
 fun PlayerScreen(player: PlayerManager, title: String, liveVm: LiveViewModel? = null, onGuide: () -> Unit = {},
                  nextLabel: String? = null, nextAtSeconds: Int = 45, autoNext: Boolean = true, onNext: () -> Unit = {}) {
@@ -73,7 +73,7 @@ fun PlayerScreen(player: PlayerManager, title: String, liveVm: LiveViewModel? = 
     }
     LaunchedEffect(overlay, lastKey, popupOpen) {
         // The menu goes away on its own after a few quiet seconds (longer while a list is open).
-        if (overlay) { delay(if (popupOpen) 12_000 else 5_000); overlay = false }
+        if (overlay) { delay(if (popupOpen) 12_000 else 8_000); overlay = false }
         else if (live) { withFrameNanos { }; runCatching { keys.requestFocus() } }
     }
 

@@ -22,11 +22,11 @@ private val UK_SHOWS = listOf(
     "Ghosts", "Inside No. 9", "Bake Off: The Professionals", "Would I Lie to You?", "Dragons' Den", "The Apprentice",
 )
 
-private const val MAX_AGE_MS = 28L * 24 * 3_600_000
+private const val MAX_AGE_MS = 7L * 24 * 3_600_000
 
 /**
  * Cover pictures for the poster wall, from TVmaze's free public service (no account or key; no personal data is sent).
- * Every 28 days it looks at what is on UK TV and the streaming services over the coming two weeks, ranks the series by
+ * Every 7 days it looks at what is on UK TV and the streaming services over the coming two weeks, ranks the series by
  * TVmaze's popularity score and keeps the top ones; if that fails, a fixed list of well-known UK shows is searched instead.
  * The result is remembered in a file. While it is out of date, the old covers are shown until the new ones arrive.
  */
