@@ -209,7 +209,7 @@ private fun RecordingsHeader(c: tv.luna.player.AppContainer, recorded: Int, sche
 @Composable
 private fun RecordingCard(r: RecordingEntity, f: Boolean, textColor: Color) {
     val colors = LocalTheme.current.colors
-    val fg = if (f) colors.onFocus else textColor
+    val fg = textColor
     val shape = RoundedCornerShape(16.dp)
     val recording = r.status == RecStatus.RECORDING
     val failed = r.status == RecStatus.FAILED || r.status == RecStatus.SKIPPED || r.status == RecStatus.MISSED
@@ -218,10 +218,9 @@ private fun RecordingCard(r: RecordingEntity, f: Boolean, textColor: Color) {
     Column(
         Modifier.fillMaxWidth().height(142.dp)
             .graphicsLayer { val sc = if (f) 1.03f else 1f; scaleX = sc; scaleY = sc }
-            .then(if (f) Modifier.shadow(18.dp, shape, ambientColor = tv.luna.player.ui.theme.Palette.glow, spotColor = tv.luna.player.ui.theme.Palette.glow) else Modifier)
             .clip(shape)
-            .background(if (f) SolidColor(colors.focus) else Brush.linearGradient(listOf(Color(0x24FFFFFF), Color(0x14FFFFFF))))
-            .border(1.dp, if (f) Color.Transparent else Color(0x2EFFFFFF), shape)
+            .background(Brush.linearGradient(if (f) listOf(Color(0x40FFFFFF), Color(0x2EFFFFFF)) else listOf(Color(0x24FFFFFF), Color(0x14FFFFFF))))
+            .border(if (f) 2.5.dp else 1.dp, if (f) Color.White else Color(0x2EFFFFFF), shape)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
@@ -239,9 +238,9 @@ private fun RecordingCard(r: RecordingEntity, f: Boolean, textColor: Color) {
                 else -> null
             }
             if (pill != null) Text(pill, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = .6.sp,
-                color = if (recording || failed) Color.White else if (f) colors.onFocus else Color.White,
+                color = Color.White,
                 modifier = Modifier.clip(RoundedCornerShape(5.dp))
-                    .background(when { recording -> Color(0xFFE53935); failed -> Color(0xCC9E3A3A); f -> Color(0x1F000000); else -> Color(0x33FFFFFF) })
+                    .background(when { recording -> Color(0xFFE53935); failed -> Color(0xCC9E3A3A); else -> Color(0x33FFFFFF) })
                     .padding(horizontal = 8.dp, vertical = 2.dp))
         }
         Column {
@@ -249,7 +248,7 @@ private fun RecordingCard(r: RecordingEntity, f: Boolean, textColor: Color) {
             val detail = if (failed) recordingStatus(r) else if (recording) recordingStatus(r) else if (r.channelLogo != null) recordingWhen(r) else "${r.channelName} · ${recordingWhen(r)}"
             Text(detail, fontSize = 13.sp, color = fg.copy(alpha = .8f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
             if (watched != null) Box(Modifier.padding(top = 8.dp).fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)).background(fg.copy(alpha = .22f))) {
-                Box(Modifier.fillMaxHeight().fillMaxWidth(watched).background(if (f) colors.onFocus else tv.luna.player.ui.theme.Palette.accent))
+                Box(Modifier.fillMaxHeight().fillMaxWidth(watched).background(tv.luna.player.ui.theme.Palette.accent))
             }
         }
     }
