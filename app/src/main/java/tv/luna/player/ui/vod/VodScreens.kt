@@ -42,6 +42,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.height
+import tv.luna.player.ui.theme.fadeListEdges
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -93,6 +96,10 @@ fun VodHomeScreen(vm: VodViewModel, nav: @Composable () -> Unit, onOpen: (VodIte
         LaunchedEffect(Unit) { if (wantFirst.value) { withFrameNanos { }; runCatching { firstItem.requestFocus(); wantFirst.value = false } } }
     }
 
+    // As on Live TV: the categories slide in at the left and everything under the top menu moves right to make room.
+    val shift by androidx.compose.animation.core.animateFloatAsState(if (railOpen) 1f else 0f,
+        androidx.compose.animation.core.tween(320, easing = androidx.compose.animation.core.FastOutSlowInEasing), label = "railShift")
+    val moved = Modifier.graphicsLayer { translationX = (tv.luna.player.ui.live.RAIL_WIDTH + 12.dp).toPx() * shift }
     Box(Modifier.fillMaxSize().guideBackground()) {
         Backdrop(focused?.let { details[it.id]?.backdrop ?: it.poster })
         Box(Modifier.padding(start = 50.dp, top = 22.dp)) { nav() }
@@ -106,11 +113,11 @@ fun VodHomeScreen(vm: VodViewModel, nav: @Composable () -> Unit, onOpen: (VodIte
         LaunchedEffect(kind) { vm.warmSearch() }
         tv.luna.player.ui.search.SearchBar(query, { vm.query.value = it },
             "Search ${gridCat?.name ?: if (kind == Kind.MOVIE) "All Movies" else "All Series"}…",
-            Modifier.padding(start = 50.dp, top = 62.dp).width(410.dp))
-        focused?.let { Hero(it, details[it.id], Modifier.padding(start = 50.dp, top = 100.dp).width(410.dp), titleLines = 1) }
+            moved.padding(start = 50.dp, top = 62.dp).width(410.dp))
+        focused?.let { Hero(it, details[it.id], moved.padding(start = 50.dp, top = 100.dp).width(410.dp), titleLines = 1) }
 
         val openRail = { railOpen = true }
-        Box(Modifier.padding(start = 50.dp, top = 260.dp).fillMaxSize()) {
+        Box(moved.padding(start = 50.dp, top = 260.dp).fillMaxSize()) {
             val found = matches
             if (found != null) {
                 if (found.isEmpty()) Text("No matches", fontSize = 15.sp, color = LocalTheme.current.colors.muted)
@@ -146,9 +153,26 @@ fun VodHomeScreen(vm: VodViewModel, nav: @Composable () -> Unit, onOpen: (VodIte
                 }
             }
         }
-        if (railOpen) VodRail(cats, gridCat?.id, railFocus,
-            onPick = { vm.gridCategory.value = it; railOpen = false },
-            onClose = { railOpen = false; refocus++ })
+        // Closed: the small tab on the left edge (press Left to open); open: the same tab on the panel's edge, pointing back.
+        androidx.compose.animation.AnimatedVisibility(!railOpen, modifier = Modifier.align(Alignment.CenterStart).padding(top = 58.dp),
+            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220)), exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))) {
+            Box(Modifier.size(14.dp, 52.dp).clip(RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp)).background(Color(0x2EEEF3FF)), contentAlignment = Alignment.Center) {
+                tv.luna.player.ui.live.Chevron(left = false)
+            }
+        }
+        androidx.compose.animation.AnimatedVisibility(railOpen, modifier = Modifier.align(Alignment.CenterStart).padding(top = 58.dp, start = tv.luna.player.ui.live.RAIL_WIDTH),
+            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260, delayMillis = 160)), exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(100))) {
+            Box(Modifier.size(14.dp, 52.dp).clip(RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp)).background(Color(0x2EEEF3FF)), contentAlignment = Alignment.Center) {
+                tv.luna.player.ui.live.Chevron(left = true)
+            }
+        }
+        androidx.compose.animation.AnimatedVisibility(railOpen, modifier = Modifier.padding(top = 58.dp),
+            enter = androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(340, easing = androidx.compose.animation.core.FastOutSlowInEasing)) { -it } + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260)),
+            exit = androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(260, easing = androidx.compose.animation.core.FastOutLinearInEasing)) { -it } + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(220))) {
+            VodRail(cats, gridCat?.id, railFocus,
+                onPick = { vm.gridCategory.value = it; railOpen = false },
+                onClose = { railOpen = false; refocus++ })
+        }
     }
 }
 
@@ -253,26 +277,49 @@ private fun Hero(item: VodItem, d: VodDetail?, modifier: Modifier, extra: String
     }
 }
 
+/** The categories for Movies and Series: the same panel as Live TV's (faint edge line, glass pills, glowing light one where the remote is). */
 @Composable
 private fun VodRail(cats: List<RailCategory>, selectedId: Long?, focus: FocusRequester, onPick: (CategoryEntity?) -> Unit, onClose: () -> Unit) {
     val start = (cats.indexOfFirst { it.category.id == selectedId } + 1).coerceAtLeast(0)
     val state = rememberLazyListState(start)
+    val colors = LocalTheme.current.colors
     Column(
-        Modifier.fillMaxHeight().width(260.dp).shadow(30.dp).background(tv.luna.player.ui.PanelBrush).padding(horizontal = 20.dp, vertical = 35.dp)
+        Modifier.fillMaxHeight().width(tv.luna.player.ui.live.RAIL_WIDTH)
+            .drawBehind {
+                val w = 1.dp.toPx()
+                drawRect(Brush.verticalGradient(0f to Color.Transparent, .15f to Color(0x33EEF3FF), .8f to Color(0x33EEF3FF), 1f to Color.Transparent),
+                    topLeft = androidx.compose.ui.geometry.Offset(size.width - w, 0f), size = androidx.compose.ui.geometry.Size(w, size.height))
+            }
+            .padding(top = 4.dp)
             .onPreviewKeyEvent { e -> if (e.type == KeyEventType.KeyDown && (e.key == Key.Back || e.key == Key.DirectionLeft)) { onClose(); true } else false },
     ) {
-        Text("CATEGORIES", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = LocalTheme.current.colors.muted, letterSpacing = 2.sp, modifier = Modifier.padding(bottom = 12.dp))
-        LazyColumn(state = state, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 14.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("CATEGORIES", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = tv.luna.player.ui.theme.Palette.accent, letterSpacing = 2.sp, modifier = Modifier.weight(1f))
+        }
+        LazyColumn(
+            state = state, verticalArrangement = Arrangement.spacedBy(5.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 24.dp, end = 14.dp, top = 10.dp, bottom = 90.dp),
+            modifier = Modifier.weight(1f).fadeListEdges(state),
+        ) {
             val all = listOf<RailCategory?>(null) + cats
             itemsIndexed(all, key = { _, c -> c?.category?.id ?: -1L }) { i, rc ->
                 // Right picks, as on the Live rail; unhandled it moved focus behind the rail and left the rail open.
                 FocusBox(onClick = { onPick(rc?.category) }, modifier = (if (i == start) Modifier.focusRequester(focus) else Modifier)
                     .onPreviewKeyEvent { e -> if (e.type == KeyEventType.KeyDown && e.key == Key.DirectionRight) { onPick(rc?.category); true } else false }) { f ->
-                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(5.dp)).background(if (f) Color.White else Color.Transparent).padding(horizontal = 11.dp, vertical = 8.dp)) {
-                        val fg = if (f) Color.Black else Color.White
-                        Text(rc?.category?.name?.ifEmpty { "Uncategorised" } ?: "All", fontSize = 14.sp, color = fg, maxLines = 1,
+                    Row(
+                        Modifier.fillMaxWidth().height(32.dp)
+                            .graphicsLayer { val sc = if (f) 1.025f else 1f; scaleX = sc; scaleY = sc }
+                            .then(if (f) Modifier.shadow(14.dp, RoundedCornerShape(5.dp), ambientColor = tv.luna.player.ui.theme.Palette.glow, spotColor = tv.luna.player.ui.theme.Palette.glow) else Modifier)
+                            .background(if (f) colors.focus else colors.cell, RoundedCornerShape(5.dp))
+                            // The category being shown has a light edge, so it can be found again.
+                            .then(if (!f && rc?.category?.id == selectedId) Modifier.border(1.5.dp, Color(0xCCFFFFFF), RoundedCornerShape(5.dp)) else Modifier)
+                            .padding(horizontal = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        val fg = if (f) colors.onFocus else Color.White
+                        Text(rc?.category?.name?.ifEmpty { "Uncategorised" } ?: "All", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = fg, maxLines = 1,
                             overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        rc?.let { Text(it.count.toString(), fontSize = 11.sp, color = if (f) fg else LocalTheme.current.colors.muted) }
+                        rc?.let { Text("  " + it.count, fontSize = 12.sp, color = fg.copy(alpha = .85f)) }
                     }
                 }
             }

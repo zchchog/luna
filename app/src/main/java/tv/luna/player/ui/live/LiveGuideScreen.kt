@@ -118,7 +118,7 @@ fun LiveGuideScreen(vm: LiveViewModel, nav: @Composable () -> Unit, onFullScreen
 
 /** The tab's arrow, drawn (a text arrow sits off-centre because of the font's spacing). */
 @Composable
-private fun Chevron(left: Boolean) {
+internal fun Chevron(left: Boolean) {
     androidx.compose.foundation.Canvas(Modifier.size(8.dp, 12.dp)) {
         val w = size.width; val h = size.height; val sw = 2.2.dp.toPx()
         val tip = if (left) Offset(sw / 2, h / 2) else Offset(w - sw / 2, h / 2)
