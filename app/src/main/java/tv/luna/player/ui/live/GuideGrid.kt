@@ -255,39 +255,33 @@ private fun GuideRow(
                             val mark = if (focusedNow) style.focusedProgrammeText else Color.White
                             if (runsBefore) drawPath(Path().apply { moveTo(1f, mid); lineTo(1f + a, mid - a); lineTo(1f + a, mid + a); close() }, mark)
                             if (runsAfter) drawPath(Path().apply { val x = size.width - 1f; moveTo(x, mid); lineTo(x - a, mid - a); lineTo(x - a, mid + a); close() }, mark)
-                            // Reminder set: a small blue bell (left of the REC badge when both).
-                            if (bell) {
-                                val cx = size.width - (if (rec) 66.dp else 12.dp).toPx(); val top = 3.dp.toPx(); val w = 7.dp.toPx(); val h = 6.dp.toPx()
-                                val c = if (focusedNow) style.focusedProgrammeText else BELL
-                                drawArc(c, 180f, 180f, true, Offset(cx - w / 2, top), Size(w, h * 1.2f))
-                                drawRect(c, Offset(cx - w / 2, top + h * .55f), Size(w, h * .45f))
-                                drawRect(c, Offset(cx - w * .7f, top + h * .95f), Size(w * 1.4f, 1.2.dp.toPx()))
-                                drawCircle(c, 1.2.dp.toPx(), Offset(cx, top + h * 1.25f))
-                            }
                         },
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     Text(p.title, fontSize = (12.5f * style.textScale).sp, fontWeight = if (focusedNow) FontWeight.SemiBold else FontWeight.Normal,
-                        color = (if (focusedNow) style.focusedProgrammeText else Color.White).copy(alpha = if (past && !focusedNow) .55f else 1f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp, end = if (rec) 62.dp else 10.dp))
+                        color = (if (focusedNow) style.focusedProgrammeText else Color.White).copy(alpha = if (past && !focusedNow) .55f else 1f), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 10.dp, end = if (rec && bell) 128.dp else if (rec) 66.dp else if (bell) 74.dp else 10.dp))
                     // Scheduled or recording: a red REC badge (SERIES when a series rule scheduled it).
-                    if (rec) Box(Modifier.align(Alignment.CenterEnd).padding(end = 6.dp)) { RecBadge(series(p)) }
+                    if (rec || bell) Row(Modifier.align(Alignment.CenterEnd).padding(end = 6.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        if (bell) Badge("REMIND", REMIND_GREEN, dot = false)
+                        if (rec) Badge(if (series(p)) "SERIES" else "REC", REC_DOT, dot = true)
+                    }
                 }
             }
         }
     }
 }
 
+/** A solid, high-contrast tag on a programme: red for recording, green for a reminder. */
 @Composable
-private fun RecBadge(series: Boolean) {
-    Row(Modifier.clip(RoundedCornerShape(4.dp)).background(REC_DOT).padding(horizontal = 5.dp, vertical = 1.5.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(5.dp).background(Color.White, androidx.compose.foundation.shape.CircleShape))
-        Spacer(Modifier.width(3.dp))
-        Text(if (series) "SERIES" else "REC", fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = .5.sp, color = Color.White, maxLines = 1)
+private fun Badge(text: String, colour: Color, dot: Boolean) {
+    Row(Modifier.clip(RoundedCornerShape(5.dp)).background(colour).padding(horizontal = 6.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (dot) { Box(Modifier.size(6.dp).background(Color.White, androidx.compose.foundation.shape.CircleShape)); Spacer(Modifier.width(4.dp)) }
+        Text(text, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = .5.sp, color = Color.White, maxLines = 1)
     }
 }
 
-private val REC_DOT = Color(0xFFE53935)
-private val BELL: Color get() = tv.luna.player.ui.theme.Palette.accent
+private val REC_DOT = Color(0xFFD32F2F)
+private val REMIND_GREEN = Color(0xFF1B8A4B)
 
 private val GLOW_ROOM = 24.dp
 
